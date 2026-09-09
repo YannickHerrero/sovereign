@@ -41,12 +41,10 @@ pub fn router(state: SharedState) -> Router {
         .layer(middleware::from_fn_with_state(state.clone(), require_token))
         .with_state(state);
 
-    Router::new().nest("/api", api).layer(
-        CorsLayer::new()
-            .allow_origin(Any)
-            .allow_methods(Any)
-            .allow_headers(Any),
-    )
+    Router::new()
+        .nest("/api", api)
+        .merge(crate::assets::router())
+        .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any))
 }
 
 async fn require_token(State(state): State<SharedState>, req: Request, next: Next) -> Response {
