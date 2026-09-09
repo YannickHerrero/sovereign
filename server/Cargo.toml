@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
+base64 = "0.22"
 axum = { version = "0.8.9", features = ["ws"] }
 dirs = "7.0.0"
 futures-util = { version = "0.3.34", features = ["sink"] }

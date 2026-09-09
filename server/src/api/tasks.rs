@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use super::{ApiError, SharedState};
 use crate::git;
-use crate::pi::{session, session::Turn, title};
+use crate::pi::{image::{self, ImageContent}, session, session::Turn, title};
 use crate::repos;
 use crate::store::{now_ms, Task, TouchedFile};
 use crate::tasks::{provisional_title, TaskSummary};
@@ -57,6 +57,8 @@ pub async fn detail(
 pub struct CreateTask {
     repo: String,
     message: String,
+    #[serde(default)]
+    images: Vec<ImageContent>,
 }
 
 pub async fn create(
@@ -64,7 +66,8 @@ pub async fn create(
     Json(body): Json<CreateTask>,
 ) -> Result<(StatusCode, Json<TaskSummary>), ApiError> {
     let message = body.message.trim().to_string();
-    if message.is_empty() {
+    image::validate(&body.images).map_err(ApiError::bad_request)?;
+    if message.is_empty() && body.images.is_empty() {
         return Err(ApiError::bad_request("message is empty"));
     }
     let repo = repos::find(&state.config.repos_root, &body.repo)
@@ -76,7 +79,7 @@ pub async fn create(
         cwd: repo.path,
         session_id: uuid::Uuid::new_v4().to_string(),
         session_file: None,
-        title: provisional_title(&message),
+        title: provisional_title(if message.is_empty() { "Image" } else { &message }),
         pinned: false,
         created_at: now,
         updated_at: now,
@@ -87,10 +90,12 @@ pub async fn create(
     state.store.insert(task.clone()).map_err(|e| ApiError::internal(e.to_string()))?;
     state.agents.broadcast_task(&task);
 
-    if let Err(err) = state.agents.prompt(&task, &message).await {
+    if let Err(err) = state.agents.prompt(&task, &message, &body.images).await {
         return Err(ApiError::internal(format!("starting pi: {err}")));
     }
-    tokio::spawn(generate_title(state.clone(), task.id.clone(), message));
+    if !message.is_empty() {
+        tokio::spawn(generate_title(state.clone(), task.id.clone(), message));
+    }
     let task = state.store.get(&task.id).unwrap_or(task);
     Ok((StatusCode::CREATED, Json(state.agents.summary(&task))))
 }
@@ -98,6 +103,8 @@ pub async fn create(
 #[derive(Deserialize)]
 pub struct Prompt {
     message: String,
+    #[serde(default)]
+    images: Vec<ImageContent>,
 }
 
 pub async fn prompt(
@@ -106,13 +113,14 @@ pub async fn prompt(
     Json(body): Json<Prompt>,
 ) -> Result<StatusCode, ApiError> {
     let message = body.message.trim();
-    if message.is_empty() {
+    image::validate(&body.images).map_err(ApiError::bad_request)?;
+    if message.is_empty() && body.images.is_empty() {
         return Err(ApiError::bad_request("message is empty"));
     }
     let task = load(&state, &id)?;
     state
         .agents
-        .prompt(&task, message)
+        .prompt(&task, message, &body.images)
         .await
         .map_err(|e| ApiError::internal(format!("sending prompt: {e}")))?;
     Ok(StatusCode::ACCEPTED)

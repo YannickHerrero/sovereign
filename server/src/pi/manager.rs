@@ -107,13 +107,13 @@ impl Agents {
 
     /// Sends a user message to the task's pi, spawning it if needed. Queues as a follow-up
     /// when pi is already streaming.
-    pub async fn prompt(self: &Arc<Self>, task: &Task, message: &str) -> Result<()> {
+    pub async fn prompt(self: &Arc<Self>, task: &Task, message: &str, images: &[super::image::ImageContent]) -> Result<()> {
         let process = self.ensure_agent(task).await?;
         let streaming = self.is_working(&task.id);
         let command = if streaming {
-            json!({ "type": "follow_up", "message": message })
+            json!({ "type": "follow_up", "message": message, "images": images })
         } else {
-            json!({ "type": "prompt", "message": message })
+            json!({ "type": "prompt", "message": message, "images": images })
         };
         process.command(command).await?;
         self.touch(&task.id);

@@ -21,7 +21,7 @@ pub struct Session {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "role", rename_all = "snake_case")]
 pub enum Turn {
-    User { text: String, at: u64 },
+    User { text: String, at: u64, #[serde(default)] images: Vec<super::image::ImageContent> },
     Agent {
         text: String,
         files: Vec<String>,
@@ -113,7 +113,12 @@ pub fn parse(raw: &str) -> Result<Session> {
                         if let Some(acc) = agent.take() {
                             session.turns.push(acc.finish());
                         }
-                        session.turns.push(Turn::User { text: content_text(message.get("content")), at });
+                        let images = message.get("content").and_then(Value::as_array)
+                            .map(|blocks| blocks.iter()
+                                .filter(|b| b.get("type").and_then(Value::as_str) == Some("image"))
+                                .filter_map(|b| serde_json::from_value(b.clone()).ok())
+                                .collect()).unwrap_or_default();
+                        session.turns.push(Turn::User { text: content_text(message.get("content")), at, images });
                     }
                     "assistant" => {
                         let acc = agent.get_or_insert_with(|| AgentAcc::new(at));
@@ -226,17 +231,29 @@ mod tests {
         assert_eq!(
             session.turns,
             vec![
-                Turn::User { text: "do it".into(), at: 1 },
+                Turn::User { text: "do it".into(), at: 1, images: vec![] },
                 Turn::Agent {
                     text: "done".into(),
                     files: vec!["a.txt".into()],
                     at: 4,
                     status: RunStatus::Settled
                 },
-                Turn::User { text: "again".into(), at: 5 },
+                Turn::User { text: "again".into(), at: 5, images: vec![] },
                 Turn::Agent { text: "nope".into(), files: vec![], at: 6, status: RunStatus::Aborted },
             ]
         );
+    }
+
+    #[test]
+    fn preserves_user_images_in_history() {
+        let raw = r#"{"type":"message","id":"a","parentId":null,"message":{"role":"user","content":[{"type":"text","text":"Check this"},{"type":"image","mimeType":"image/png","data":"YQ=="}],"timestamp":1}}"#;
+        let session = parse(raw).unwrap();
+        assert_eq!(session.turns, vec![Turn::User {
+            text: "Check this".into(), at: 1,
+            images: vec![super::super::image::ImageContent { data: "YQ==".into(), mime_type: "image/png".into() }],
+        }]);
+        let image_only = raw.replace("{\"type\":\"text\",\"text\":\"Check this\"},", "");
+        assert!(matches!(&parse(&image_only).unwrap().turns[0], Turn::User { text, images, .. } if text.is_empty() && images.len() == 1));
     }
 
     #[test]

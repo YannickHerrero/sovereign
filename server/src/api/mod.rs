@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use axum::extract::{Request, State};
+use axum::extract::{DefaultBodyLimit, Request, State};
 use axum::http::{header, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
@@ -38,6 +38,7 @@ pub fn router(state: SharedState) -> Router {
         .route("/tasks/{id}/diff", get(tasks::diff))
         .route("/tasks/{id}/ui-response", post(tasks::ui_response))
         .route("/ws", get(ws::upgrade))
+        .layer(DefaultBodyLimit::max(8 * 1024 * 1024))
         .layer(middleware::from_fn_with_state(state.clone(), require_token))
         .with_state(state);
 
