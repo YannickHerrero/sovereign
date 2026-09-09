@@ -30,6 +30,19 @@ pub fn list(root: &Path) -> std::io::Result<Vec<Repo>> {
     Ok(repos)
 }
 
+pub fn find(root: &Path, name: &str) -> Option<Repo> {
+    if name.is_empty() || name.starts_with('.') || name.contains('/') {
+        return None;
+    }
+    let path = root.join(name);
+    if !path.is_dir() {
+        return None;
+    }
+    let is_git = path.join(".git").exists();
+    let branch = if is_git { current_branch(&path) } else { None };
+    Some(Repo { name: name.to_string(), path, is_git, branch })
+}
+
 pub fn current_branch(repo: &Path) -> Option<String> {
     let output = std::process::Command::new("git")
         .args(["rev-parse", "--abbrev-ref", "HEAD"])

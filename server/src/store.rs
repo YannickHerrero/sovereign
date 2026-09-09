@@ -14,7 +14,7 @@ pub struct Task {
     pub repo: String,
     pub cwd: PathBuf,
     pub session_id: String,
-    pub session_file: PathBuf,
+    pub session_file: Option<PathBuf>,
     pub title: String,
     pub pinned: bool,
     pub created_at: u64,
