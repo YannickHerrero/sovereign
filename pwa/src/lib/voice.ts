@@ -4,7 +4,8 @@
  * over a WebSocket; transcript deltas arrive while the user is still speaking.
  */
 
-const REALTIME_URL = 'wss://api.openai.com/v1/realtime';
+// Select transcription at connection time, before sending session.update.
+const REALTIME_URL = 'wss://api.openai.com/v1/realtime?intent=transcription';
 const MODEL = 'gpt-live-transcribe';
 const TARGET_RATE = 24000;
 
