@@ -10,3 +10,6 @@ pwa/dist/
 .vscode/
 .idea/
 .DS_Store
+
+# Vercel
+pwa/.vercel/
