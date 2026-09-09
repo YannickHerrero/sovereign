@@ -1,0 +1,17 @@
+# User service: install to ~/.config/systemd/user/sovereign.service
+# then: systemctl --user daemon-reload && systemctl --user enable --now sovereign
+# For a headless machine also run: loginctl enable-linger $USER
+[Unit]
+Description=Sovereign server (pi remote console)
+After=network-online.target
+
+[Service]
+ExecStart=%h/.cargo/bin/sovereign-server
+Restart=on-failure
+RestartSec=3
+Environment=RUST_LOG=info
+# pi is installed through mise/npm: make sure it is on PATH for the service.
+Environment=PATH=%h/.local/share/mise/shims:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target
