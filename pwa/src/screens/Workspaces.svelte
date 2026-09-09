@@ -1,44 +1,11 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
-  import { api } from '../lib/api';
   import { agentsLabel, seenLabel } from '../lib/format';
+  import { presence } from '../lib/presence.svelte';
   import { router } from '../lib/router.svelte';
-  import { settings, type Server } from '../lib/settings.svelte';
+  import { settings } from '../lib/settings.svelte';
 
-  interface Status {
-    online: boolean;
-    agents: number;
-    name?: string;
-  }
-
-  let statuses = $state<Record<string, Status>>({});
-  let now = $state(Date.now());
-
-  async function probe(server: Server) {
-    try {
-      const ws = await api.workspace(server);
-      statuses[server.id] = { online: true, agents: ws.agents_running, name: ws.name };
-      settings.updateServer(server.id, { lastSeen: Date.now() });
-    } catch {
-      statuses[server.id] = { online: false, agents: 0 };
-    }
-  }
-
-  function refresh() {
-    now = Date.now();
-    for (const server of settings.servers) void probe(server);
-  }
-
-  $effect(() => {
-    refresh();
-    const timer = setInterval(refresh, 15000);
-    const onVisible = () => document.visibilityState === 'visible' && refresh();
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  });
+  $effect(() => presence.acquire());
 </script>
 
 <div class="screen">
@@ -54,7 +21,7 @@
 
   <div class="scroll list">
     {#each settings.servers as server (server.id)}
-      {@const status = statuses[server.id]}
+      {@const status = presence.status(server.id)}
       {@const online = status?.online ?? false}
       {@const agents = status?.agents ?? 0}
       <button class="card ws" onclick={() => router.go({ name: 'tasks', wsId: server.id })}>
@@ -66,7 +33,7 @@
         <div class="meta">
           <span style:color={online ? 'var(--green)' : 'var(--muted-3)'}>{status === undefined ? 'Connecting' : online ? 'Online' : 'Offline'}</span>
           <span class="sep">·</span>
-          <span>{seenLabel(online, server.lastSeen, now)}</span>
+          <span>{seenLabel(online, server.lastSeen, presence.now)}</span>
         </div>
         <div class="agents">
           {#if agents > 0}
