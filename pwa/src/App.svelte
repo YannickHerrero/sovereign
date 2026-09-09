@@ -2,6 +2,7 @@
   import { router } from './lib/router.svelte';
   import { workspaceStore } from './lib/workspace.svelte';
   import Settings from './screens/Settings.svelte';
+  import Chat from './screens/Chat.svelte';
   import Tasks from './screens/Tasks.svelte';
   import Workspaces from './screens/Workspaces.svelte';
 
@@ -19,7 +20,9 @@
   {:else if route.name === 'tasks' && store}
     <Tasks {store} />
   {:else if route.name === 'chat' && store}
-    <Tasks {store} />
+    {#key route.taskId}
+      <Chat {store} taskId={route.taskId} />
+    {/key}
   {:else}
     <Workspaces />
   {/if}

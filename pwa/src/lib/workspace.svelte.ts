@@ -12,6 +12,8 @@ export class WorkspaceStore {
   error = $state<string | null>(null);
 
   private listeners = new Set<RunListener>();
+  /** First prompt of tasks created from this client, shown until pi has persisted it. */
+  private firstPrompts = new Map<string, string>();
   private disconnect: (() => void) | null = null;
   private refCount = 0;
 
@@ -35,6 +37,14 @@ export class WorkspaceStore {
 
   task(id: string): TaskSummary | undefined {
     return this.tasks.find((t) => t.id === id);
+  }
+
+  rememberFirstPrompt(taskId: string, text: string) {
+    this.firstPrompts.set(taskId, text);
+  }
+
+  firstPrompt(taskId: string): string | undefined {
+    return this.firstPrompts.get(taskId);
   }
 
   async refresh() {

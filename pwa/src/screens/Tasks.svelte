@@ -51,6 +51,7 @@
     try {
       const task = await api.createTask(store.server, repo, message);
       store.upsert(task);
+      store.rememberFirstPrompt(task.id, message);
       router.go({ name: 'chat', wsId: store.server.id, taskId: task.id });
     } catch (err) {
       error = (err as Error).message;
