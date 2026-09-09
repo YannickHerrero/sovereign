@@ -33,7 +33,9 @@ async function request<T>(server: Server, method: string, path: string, body?: u
       throw new ApiError(res.status, message);
     }
     if (res.status === 204) return undefined as T;
-    return (await res.json()) as T;
+    // Accepted commands (202) also return an empty body, not JSON.
+    const text = await res.text();
+    return text.trim() ? (JSON.parse(text) as T) : (undefined as T);
   } finally {
     clearTimeout(timer);
   }
