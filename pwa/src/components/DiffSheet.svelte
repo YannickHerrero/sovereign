@@ -53,6 +53,9 @@
     z-index: 50;
     animation: sheetUp 0.24s cubic-bezier(0.22, 0.8, 0.3, 1) both;
   }
+  .topbar {
+    flex-shrink: 0;
+  }
   .label {
     flex: 1;
     text-align: center;
@@ -63,12 +66,15 @@
     width: 36px;
   }
   .body {
+    min-height: 0;
     padding: 8px 14px calc(var(--safe-bottom) + 30px);
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
   .file {
+    /* Keep the full diff height so the parent scrolls instead of clipping cards. */
+    flex-shrink: 0;
     background: var(--surface);
     border-radius: 14px;
     overflow: hidden;
