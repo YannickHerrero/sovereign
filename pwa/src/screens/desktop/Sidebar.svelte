@@ -12,9 +12,11 @@
     filter: Filter;
     onFilter: (filter: Filter) => void;
     model: string | null;
+    collapsed: boolean;
+    onToggle: () => void;
   }
 
-  let { store, filter, onFilter, model }: Props = $props();
+  let { store, filter, onFilter, model, collapsed, onToggle }: Props = $props();
 
   const route = $derived(router.route);
   const activeWs = $derived('wsId' in route ? route.wsId : undefined);
@@ -26,9 +28,16 @@
   }
 </script>
 
-<aside class="sidebar">
-  <div class="titlebar"></div>
+<aside class="sidebar" class:collapsed>
+  <div class="titlebar">
+    <button class="round" aria-label={collapsed ? 'Expand workspaces sidebar' : 'Collapse workspaces sidebar'}
+      title={collapsed ? 'Expand workspaces sidebar' : 'Collapse workspaces sidebar'}
+      aria-expanded={!collapsed} aria-controls="workspace-navigation" onclick={onToggle}>
+      <Icon name={collapsed ? 'forward' : 'back'} color="var(--ink-control)" />
+    </button>
+  </div>
 
+  <div id="workspace-navigation" hidden={collapsed}>
   <div class="section">Workspaces</div>
   <div class="items">
     {#each settings.servers as server (server.id)}
@@ -60,14 +69,18 @@
     {/each}
   </div>
 
+  </div>
+
   <div class="spacer"></div>
 
-  <button class="footer" class:active={route.name === 'settings'} onclick={() => router.go({ name: 'settings' })}>
+  <button class="footer" class:active={route.name === 'settings'} aria-label="Settings" title="Settings" onclick={() => router.go({ name: 'settings' })}>
     <span class="gear"><Icon name="gear" color="var(--ink-control)" /></span>
+    {#if !collapsed}
     <span class="footer-text">
       <span class="footer-title">Settings</span>
       <span class="footer-sub">{model ?? 'Machines and voice'}</span>
     </span>
+    {/if}
   </button>
 </aside>
 
@@ -78,11 +91,24 @@
     background: #f1efea;
     border-right: 1px solid rgba(0, 0, 0, 0.07);
     min-height: 0;
+    min-width: 0;
     overflow-y: auto;
   }
   .titlebar {
     height: 44px;
     flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 10px;
+  }
+  .collapsed .titlebar {
+    justify-content: center;
+    padding: 0;
+  }
+  .collapsed .footer {
+    justify-content: center;
+    padding: 14px 0;
   }
   .section {
     padding: 10px 16px 8px;

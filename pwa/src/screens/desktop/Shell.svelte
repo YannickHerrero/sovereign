@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { layout } from '../../lib/layout.svelte';
   import { router } from '../../lib/router.svelte';
   import { settings } from '../../lib/settings.svelte';
   import { FILTERS, type Filter } from '../../lib/tasks';
@@ -25,8 +26,9 @@
   });
 </script>
 
-<div class="shell">
-  <Sidebar {store} {filter} onFilter={(f) => (filter = f)} {model} />
+<div class="shell" class:sidebar-collapsed={layout.sidebarCollapsed}>
+  <Sidebar {store} {filter} onFilter={(f) => (filter = f)} {model}
+    collapsed={layout.sidebarCollapsed} onToggle={() => layout.toggleSidebar()} />
 
   {#if store}
     <TaskList {store} {filter} activeTaskId={taskId} />
@@ -61,6 +63,9 @@
     grid-template-columns: 252px 352px minmax(0, 1fr);
     height: 100%;
     background: var(--bg);
+  }
+  .shell.sidebar-collapsed {
+    grid-template-columns: 52px 352px minmax(0, 1fr);
   }
   .column {
     position: relative;
