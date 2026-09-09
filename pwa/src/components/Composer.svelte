@@ -102,10 +102,14 @@
     const text = draft.trim();
     if (!text || sending) return;
     sending = true;
+    textarea?.blur();
+    open = false;
     try {
       await onSubmit(text);
       draft = '';
-      open = false;
+    } catch {
+      // The parent displays the error; keep the draft available for retry.
+      open = true;
     } finally {
       sending = false;
     }
@@ -165,6 +169,7 @@
         <textarea
           bind:this={textarea}
           bind:value={draft}
+          disabled={sending}
           {placeholder}
           rows="3"
           onkeydown={onKeydown}

@@ -45,7 +45,7 @@
   async function create(message: string) {
     if (!repo) {
       error = 'Choose a repo first';
-      return;
+      throw new Error(error);
     }
     error = null;
     try {
