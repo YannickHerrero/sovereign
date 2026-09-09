@@ -1,9 +1,8 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { ComposerState, isSubmitShortcut, type SubmitHandler } from '../lib/composer.svelte';
   import { keyboard } from '../lib/keyboard.svelte';
-  import { settings } from '../lib/settings.svelte';
-  import type { ImageContent, Repo } from '../lib/types';
-  import { VoiceSession, voiceAvailable } from '../lib/voice';
+  import type { Repo } from '../lib/types';
   import Icon from './Icon.svelte';
 
   interface Props {
@@ -14,32 +13,24 @@
     model?: string | null;
     repos?: Repo[];
     onRepoChange?: (name: string) => void;
-    onSubmit: (text: string, images: ImageContent[]) => Promise<void> | void;
+    onSubmit: SubmitHandler;
     open?: boolean;
   }
 
   let { placeholder, repo, branch = null, model = null, repos, onRepoChange, onSubmit, open = $bindable(false) }: Props =
     $props();
 
-  let draft = $state('');
-  let sending = $state(false);
-  let image = $state<ImageContent | null>(null);
+  const c = new ComposerState();
   let imageInput: HTMLInputElement;
-  let imageLoading = $state(false);
-  let imageError = $state<string | null>(null);
   let textarea = $state<HTMLTextAreaElement | null>(null);
-  let mode = $state<'text' | 'voice'>('text');
-  let transcript = $state('');
-  let voiceError = $state<string | null>(null);
-  let seconds = $state(0);
-  let voice: VoiceSession | null = null;
-  let ticker: ReturnType<typeof setInterval> | undefined;
 
-  const hasDraft = $derived(draft.trim().length > 0 || image !== null);
-  const timer = $derived(`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
-  const canVoice = $derived(voiceAvailable() && settings.openaiKey !== '');
+  $effect(() => () => c.dispose());
 
-  $effect(() => () => cancelVoice());
+  async function focusEnd() {
+    await tick();
+    textarea?.focus();
+    textarea?.setSelectionRange(c.draft.length, c.draft.length);
+  }
 
   async function start() {
     open = true;
@@ -48,129 +39,45 @@
   }
 
   function close() {
-    cancelVoice();
+    c.cancelVoice();
     open = false;
   }
 
-  async function startVoice() {
-    if (!canVoice) {
-      voiceError = voiceAvailable() ? 'Add an OpenAI key in Settings to dictate.' : 'Voice needs microphone access over HTTPS.';
-      await start();
-      return;
-    }
-    voiceError = null;
-    transcript = '';
-    seconds = 0;
-    mode = 'voice';
+  async function mic() {
     open = true;
-    const session = new VoiceSession(settings.openaiKey, {
-      onDelta: (text) => (transcript = text),
-      onCompleted: (text) => (transcript = text),
-      onError: (message) => (voiceError = message),
-    });
-    voice = session;
-    try {
-      await session.start();
-      ticker = setInterval(() => seconds++, 1000);
-    } catch (err) {
-      voice = null;
-      voiceError = (err as Error).message;
-      mode = 'text';
-      await tick();
-      textarea?.focus();
-    }
+    const started = await c.startVoice();
+    if (!started) await focusEnd();
   }
 
   async function stopVoice() {
-    const session = voice;
-    voice = null;
-    clearInterval(ticker);
-    const text = session ? await session.stop() : transcript;
-    draft = draft ? `${draft.trimEnd()} ${text}`.trim() : text;
-    transcript = '';
-    mode = 'text';
-    await tick();
-    textarea?.focus();
-    textarea?.setSelectionRange(draft.length, draft.length);
-  }
-
-  function cancelVoice() {
-    clearInterval(ticker);
-    voice?.cancel();
-    voice = null;
-    transcript = '';
-    mode = 'text';
+    await c.stopVoice();
+    await focusEnd();
   }
 
   function chooseImage(event: Event) {
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
-    if (file) void attachImage(file);
+    if (file) void c.attachImage(file);
   }
 
   function onPaste(event: ClipboardEvent) {
-    const file = Array.from(event.clipboardData?.files ?? []).find((file) => file.type.startsWith('image/'));
-    if (!file) return;
-    event.preventDefault();
-    void attachImage(file);
-  }
-
-  async function attachImage(file: File) {
-    if (sending || imageLoading) return;
-    imageError = null;
-    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
-      imageError = 'Choose a JPEG, PNG, WebP or GIF image.';
-      return;
-    }
-    if (!file.size || file.size > 5 * 1024 * 1024) {
-      imageError = 'Image must be non-empty and at most 5 MiB.';
-      return;
-    }
-    imageLoading = true;
-    try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Could not read image.'));
-        reader.readAsDataURL(file);
-      });
-      image = { type: 'image', mimeType: file.type, data: dataUrl.slice(dataUrl.indexOf(',') + 1) };
-    } catch (err) {
-      imageError = (err as Error).message;
-    } finally {
-      imageLoading = false;
-    }
+    if (c.pasteImage(event)) event.preventDefault();
   }
 
   async function submit() {
-    const text = draft.trim();
-    if ((!text && !image) || sending || imageLoading) return;
-    sending = true;
+    if (!c.hasDraft || c.busy) return;
     textarea?.blur();
     open = false;
-    try {
-      await onSubmit(text, image ? [image] : []);
-      draft = '';
-      image = null;
-      imageError = null;
-    } catch {
-      // The parent displays the error; keep the draft available for retry.
-      open = true;
-    } finally {
-      sending = false;
-    }
+    const sent = await c.submit(onSubmit);
+    if (!sent) open = true;
   }
 
   function onKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+    if (isSubmitShortcut(event)) {
       event.preventDefault();
       void submit();
     }
-  }
-
-  function mic() {
-    void startVoice();
   }
 </script>
 
@@ -212,13 +119,13 @@
         {/if}
       </div>
 
-      {#if mode === 'voice'}
-        <div class="transcript">{transcript || (seconds === 0 ? 'Listening…' : '')}</div>
+      {#if c.mode === 'voice'}
+        <div class="transcript">{c.transcript || (c.seconds === 0 ? 'Listening…' : '')}</div>
       {:else}
         <textarea
           bind:this={textarea}
-          bind:value={draft}
-          disabled={sending}
+          bind:value={c.draft}
+          disabled={c.sending}
           {placeholder}
           rows="3"
           onkeydown={onKeydown}
@@ -226,22 +133,22 @@
           enterkeyhint="send"
         ></textarea>
       {/if}
-      {#if image}
+      {#if c.image}
         <div class="attachment">
-          <img src={`data:${image.mimeType};base64,${image.data}`} alt="Attachment preview" />
-          <button disabled={sending} onclick={() => (image = null)} aria-label="Remove image">Remove image</button>
+          <img src={`data:${c.image.mimeType};base64,${c.image.data}`} alt="Attachment preview" />
+          <button disabled={c.sending} onclick={() => c.removeImage()} aria-label="Remove image">Remove image</button>
         </div>
       {/if}
-      {#if imageLoading}<div class="voice-error">Loading image…</div>{/if}
-      {#if imageError}<div class="voice-error" role="alert">{imageError}</div>{/if}
-      {#if voiceError}
-        <div class="voice-error">{voiceError}</div>
+      {#if c.imageLoading}<div class="voice-error">Loading image…</div>{/if}
+      {#if c.imageError}<div class="voice-error" role="alert">{c.imageError}</div>{/if}
+      {#if c.voiceError}
+        <div class="voice-error">{c.voiceError}</div>
       {/if}
 
       <div class="bar">
         <div class="left">
           <button class="round round--filled small" aria-label="Attach image" title="Attach image"
-            disabled={sending || imageLoading || mode === 'voice'} onclick={() => imageInput.click()}>
+            disabled={c.busy || c.mode === 'voice'} onclick={() => imageInput.click()}>
             <Icon name="plus" color="var(--ink-control)" />
           </button>
           {#if model}
@@ -251,14 +158,14 @@
             </span>
           {/if}
         </div>
-        {#if mode === 'voice'}
+        {#if c.mode === 'voice'}
           <button class="record" aria-label="Stop recording" onclick={stopVoice}>
             <Icon name="stop" />
-            <span class="timer">{timer}</span>
+            <span class="timer">{c.timer}</span>
             <span class="wave"><i></i><i></i><i></i><i></i><i></i></span>
           </button>
-        {:else if hasDraft}
-          <button class="round send" aria-label="Send" disabled={sending || imageLoading} onclick={submit}>
+        {:else if c.hasDraft}
+          <button class="round send" aria-label="Send" disabled={c.busy} onclick={submit}>
             <Icon name="send" color="#fff" />
           </button>
         {:else}
