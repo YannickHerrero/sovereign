@@ -1,0 +1,12 @@
+# Rust
+server/target/
+
+# Node
+pwa/node_modules/
+pwa/dist/
+*.log
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
