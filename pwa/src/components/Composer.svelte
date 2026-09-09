@@ -1,7 +1,9 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import { keyboard } from '../lib/keyboard.svelte';
+  import { settings } from '../lib/settings.svelte';
   import type { Repo } from '../lib/types';
+  import { VoiceSession, voiceAvailable } from '../lib/voice';
   import Icon from './Icon.svelte';
 
   interface Props {
@@ -13,27 +15,27 @@
     repos?: Repo[];
     onRepoChange?: (name: string) => void;
     onSubmit: (text: string) => Promise<void> | void;
-    /** Starts voice capture; omitted when voice is unavailable. */
-    onVoice?: () => void;
     open?: boolean;
   }
 
-  let { placeholder, repo, branch = null, model = null, repos, onRepoChange, onSubmit, onVoice, open = $bindable(false) }: Props =
+  let { placeholder, repo, branch = null, model = null, repos, onRepoChange, onSubmit, open = $bindable(false) }: Props =
     $props();
 
   let draft = $state('');
   let sending = $state(false);
   let textarea = $state<HTMLTextAreaElement | null>(null);
+  let mode = $state<'text' | 'voice'>('text');
+  let transcript = $state('');
+  let voiceError = $state<string | null>(null);
+  let seconds = $state(0);
+  let voice: VoiceSession | null = null;
+  let ticker: ReturnType<typeof setInterval> | undefined;
 
   const hasDraft = $derived(draft.trim().length > 0);
+  const timer = $derived(`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
+  const canVoice = $derived(voiceAvailable() && settings.openaiKey !== '');
 
-  export async function openWith(text: string) {
-    draft = text;
-    open = true;
-    await tick();
-    textarea?.focus();
-    textarea?.setSelectionRange(draft.length, draft.length);
-  }
+  $effect(() => () => cancelVoice());
 
   async function start() {
     open = true;
@@ -42,7 +44,58 @@
   }
 
   function close() {
+    cancelVoice();
     open = false;
+  }
+
+  async function startVoice() {
+    if (!canVoice) {
+      voiceError = voiceAvailable() ? 'Add an OpenAI key in Settings to dictate.' : 'Voice needs microphone access over HTTPS.';
+      await start();
+      return;
+    }
+    voiceError = null;
+    transcript = '';
+    seconds = 0;
+    mode = 'voice';
+    open = true;
+    const session = new VoiceSession(settings.openaiKey, {
+      onDelta: (text) => (transcript = text),
+      onCompleted: (text) => (transcript = text),
+      onError: (message) => (voiceError = message),
+    });
+    voice = session;
+    try {
+      await session.start();
+      ticker = setInterval(() => seconds++, 1000);
+    } catch (err) {
+      voice = null;
+      voiceError = (err as Error).message;
+      mode = 'text';
+      await tick();
+      textarea?.focus();
+    }
+  }
+
+  async function stopVoice() {
+    const session = voice;
+    voice = null;
+    clearInterval(ticker);
+    const text = session ? await session.stop() : transcript;
+    draft = draft ? `${draft.trimEnd()} ${text}`.trim() : text;
+    transcript = '';
+    mode = 'text';
+    await tick();
+    textarea?.focus();
+    textarea?.setSelectionRange(draft.length, draft.length);
+  }
+
+  function cancelVoice() {
+    clearInterval(ticker);
+    voice?.cancel();
+    voice = null;
+    transcript = '';
+    mode = 'text';
   }
 
   async function submit() {
@@ -66,8 +119,7 @@
   }
 
   function mic() {
-    if (onVoice) onVoice();
-    else void start();
+    void startVoice();
   }
 </script>
 
@@ -107,14 +159,21 @@
         {/if}
       </div>
 
-      <textarea
-        bind:this={textarea}
-        bind:value={draft}
-        {placeholder}
-        rows="3"
-        onkeydown={onKeydown}
-        enterkeyhint="send"
-      ></textarea>
+      {#if mode === 'voice'}
+        <div class="transcript">{transcript || (seconds === 0 ? 'Listening…' : '')}</div>
+      {:else}
+        <textarea
+          bind:this={textarea}
+          bind:value={draft}
+          {placeholder}
+          rows="3"
+          onkeydown={onKeydown}
+          enterkeyhint="send"
+        ></textarea>
+      {/if}
+      {#if voiceError}
+        <div class="voice-error">{voiceError}</div>
+      {/if}
 
       <div class="bar">
         <div class="left">
@@ -128,7 +187,13 @@
             </span>
           {/if}
         </div>
-        {#if hasDraft}
+        {#if mode === 'voice'}
+          <button class="record" aria-label="Stop recording" onclick={stopVoice}>
+            <Icon name="stop" />
+            <span class="timer">{timer}</span>
+            <span class="wave"><i></i><i></i><i></i><i></i><i></i></span>
+          </button>
+        {:else if hasDraft}
           <button class="round send" aria-label="Send" disabled={sending} onclick={submit}>
             <Icon name="send" color="#fff" />
           </button>
@@ -258,5 +323,56 @@
   }
   .send:disabled {
     opacity: 0.6;
+  }
+  .transcript {
+    margin: 11px 0 14px;
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--accent);
+    min-height: 66px;
+  }
+  .voice-error {
+    margin: 0 0 8px;
+    font-size: 12.5px;
+    color: var(--red);
+  }
+  .record {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--dark);
+    border-radius: 999px;
+    padding: 7px 12px 7px 9px;
+    flex: none;
+  }
+  .timer {
+    font-size: 13px;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .wave {
+    display: flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 15px;
+  }
+  .wave i {
+    width: 2.5px;
+    height: 15px;
+    border-radius: 2px;
+    background: #fff;
+    animation: wave 0.9s ease-in-out infinite;
+  }
+  .wave i:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .wave i:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  .wave i:nth-child(4) {
+    animation-delay: 0.45s;
+  }
+  .wave i:nth-child(5) {
+    animation-delay: 0.6s;
   }
 </style>
