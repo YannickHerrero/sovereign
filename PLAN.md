@@ -244,3 +244,5 @@ Nouveaux fichiers desktop :
 | D6 | Captures de contrôle à 1280 et 1600 px, redéploiement Vercel | maquette et rendu côte à côte |
 
 Estimation : D0 est la phase la plus risquée (refactor du mobile), les autres sont additives.
+
+État au 9 septembre 2026 : D0 à D6 livrées. Mobile vérifié identique au pixel près avant et après D0 (cinq écrans). Desktop vérifié à 1280×824 en headless : liste, tâche ouverte, nouvelle tâche, diff, settings, et un run pi créé depuis le composer ancré avec ⌘↵. Déployé sur Vercel.
