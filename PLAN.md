@@ -170,3 +170,77 @@ Chaque phase se termine par un état qui tourne. Commits atomiques à l'intérie
 Notifications push, création de PR, branches par tâche, affichage des tool calls bruts, changement de modèle, pièces jointes autres que les images, multi-utilisateur, hub central.
 
 Ajout après la v1 : le « + » du composer permet de joindre une image (JPEG, PNG, WebP ou GIF, 5 Mio maximum), avec aperçu et retrait avant envoi. L’API transmet les blocs image à pi pour les nouveaux prompts et les follow-ups ; les images sont aussi affichées dans l’historique.
+
+## 7. Mode desktop (plan, 9 septembre 2026)
+
+Source : "Agent Console Desktop.dc.html" dans la seconde version du zip. Fenêtre 1280×824, trois colonnes. Même palette, même typographie, même animations que le mobile. Le cadre macOS (feux tricolores, ombre de fenêtre) est un habillage de maquette et n'est pas repris : l'application web occupe tout le viewport.
+
+### Ce que montre la maquette
+
+**Colonne 1, barre latérale (252 px, fond `#F1EFEA`, bordure droite 1 px)**
+- Section "WORKSPACES" (11 px, majuscules, espacement 0.5 px) : une ligne par machine avec point de statut, nom 13.5 px, badge bleu "N" (pilule `rgba(44,111,187,.1)`) quand des agents tournent, sous-ligne "Online · Connected now". Ligne sélectionnée : fond `rgba(0,0,0,.07)`, rayon 9 px.
+- Section "FILTERS" : All tasks, Working, Needs review, Merged, chacun avec son compteur à droite. Sélection : fond `rgba(0,0,0,.06)`.
+- Pied : avatar rond, e-mail, modèle courant.
+
+**Colonne 2, liste des tâches (352 px)**
+- En-tête 44 px : loupe et champ "Search tasks" sans bordure.
+- Titre du workspace 17 px, sous-titre "N tasks · M running" ou "idle".
+- Groupes Pinned / Today / Earlier, lignes 13.5 px avec point de statut, repo, état, `+n -m`. Ligne active : fond `rgba(0,0,0,.06)`, rayon 9 px, marge 8 px.
+- État vide "No tasks match."
+
+**Colonne 3, conversation (reste de la largeur, fond `#FBFAF8`)**
+- En-tête 44 px : titre de la tâche 13.5 px, méta "repo · branche", chip "View PR +n -m" (blanc, rayon 8 px, bordure 1 px).
+- Fil de discussion centré, largeur max 720 px, bulles utilisateur à 74 % max, tours agent identiques au mobile, liste de fichiers dans une carte blanche à bordure.
+- Composer ancré en bas, toujours ouvert (pas de pilule idle), carte blanche rayon 14 px, largeur max 720 px : chip repo + branche, textarea 2 lignes avec placeholder "Plan, ask, build…  ⌘↵ to send", bouton "+" carré 28 px rayon 8, chip modèle, micro et envoi 30 px (envoi gris `#c9c6bd` quand vide, noir sinon). Mode vocal : transcript bleu et bouton stop noir avec timer et ondes, comme le mobile.
+
+### Ce que la maquette ne montre pas et ce que je propose
+
+| Besoin | Proposition |
+|---|---|
+| Créer une tâche | Bouton "+" dans l'en-tête de la colonne 2 (à droite de la recherche). Il vide la sélection : le panneau droit affiche "New task", le chip repo du composer devient un sélecteur, l'envoi crée la tâche puis la sélectionne. |
+| Épingler, renommer, arrêter, supprimer | Bouton "…" dans l'en-tête de la colonne 3, même menu que le mobile. |
+| Diff | Le chip "View diff" ouvre un panneau latéral droit de 520 px qui glisse par-dessus la conversation (fond `#F7F6F3`, bordure gauche), fermé par Échap ou la croix. Même rendu de patch que la feuille mobile. |
+| Settings | Entrée "Settings" en pied de barre latérale (remplace l'e-mail : l'application n'a pas de compte). Le contenu s'affiche dans la colonne 3, centré, largeur max 720 px. Le modèle courant reste affiché sous l'entrée. |
+| Aucune machine configurée | Colonne 3 affiche une invitation à ouvrir Settings. |
+| Raccourcis | ⌘↵ ou Ctrl↵ envoie (déjà en place), Échap ferme le diff ou le menu. Pas de navigation clavier dans la liste en v1. |
+| Filtres | Mêmes filtres que le mobile (All tasks, Working, Has changes, Failed) avec compteurs. "Needs review" et "Merged" de la maquette n'existent pas dans l'application. |
+
+### Bascule mobile / desktop
+
+- Point de rupture unique : largeur de viewport ≥ 960 px et pointeur fin → desktop. En dessous, l'interface mobile actuelle, inchangée.
+- Détection par `matchMedia` dans un petit store `layout.svelte.ts`, réévaluée au redimensionnement. Pas de choix manuel en v1.
+- Mêmes routes dans les deux modes. En desktop, `/` sélectionne le premier workspace, `/w/:ws` affiche la liste sans tâche active, `/w/:ws/t/:id` sélectionne la tâche, `/settings` affiche Settings dans la colonne 3. La barre latérale et la colonne 2 restent montées quelle que soit la route : l'état (recherche, filtre, scroll) survit à la navigation.
+
+### Réutilisation et découpage
+
+Le mobile et le desktop partagent toute la logique ; seule la mise en page diffère. Pour ne pas dupliquer les 500 lignes de `Chat.svelte` et les 450 de `Composer.svelte`, trois extractions préalables :
+
+1. `lib/chat.svelte.ts` : classe `ChatSession` (chargement du détail, tours, état live, gestion des événements, envoi, diff, épingler, renommer, arrêter, supprimer). `Chat.svelte` mobile ne garde que le rendu.
+2. `components/Thread.svelte` : rendu de la liste des tours, du tour live et des fichiers (avec le repli à trois entrées), paramétré par une classe CSS de variante (`mobile` / `desktop`) pour les tailles de police et la largeur des bulles.
+3. `lib/composer.svelte.ts` : classe `ComposerState` (brouillon, images jointes, collage, voix, envoi). `Composer.svelte` mobile la consomme ; un nouveau `DockedComposer.svelte` desktop la consomme aussi.
+4. `lib/presence.svelte.ts` : sondage des machines (`GET /workspace` toutes les 15 s, last seen), aujourd'hui dans `Workspaces.svelte`, partagé avec la barre latérale.
+
+Nouveaux fichiers desktop :
+
+- `screens/desktop/Shell.svelte` : grille trois colonnes.
+- `screens/desktop/Sidebar.svelte` : workspaces, filtres avec compteurs, pied avec Settings et modèle.
+- `screens/desktop/TaskList.svelte` : recherche, titre, groupes, bouton nouvelle tâche.
+- `screens/desktop/TaskPane.svelte` : en-tête, `Thread`, `DockedComposer`, menu, état "New task" et état vide.
+- `screens/desktop/DiffPanel.svelte` : panneau latéral, réutilise le rendu de patch extrait de `DiffSheet.svelte` dans `components/Patch.svelte`.
+- `lib/layout.svelte.ts`.
+
+`App.svelte` choisit `Shell` ou les écrans mobiles selon `layout`. Les stores par workspace sont déjà comptés par référence : la barre latérale prend une référence sur chaque workspace configuré pour recevoir les compteurs "N running" en direct.
+
+### Phases
+
+| # | Phase | Livrable vérifiable |
+|---|---|---|
+| D0 | Extractions `ChatSession`, `Thread`, `ComposerState`, `presence`, `Patch` sans changement visible côté mobile | captures mobile identiques avant / après, `pnpm check` vert |
+| D1 | `layout` store, `Shell` trois colonnes vides, bascule au point de rupture | grille visible à 1280 px, mobile intact à 402 px |
+| D2 | Barre latérale : workspaces avec présence et badges, filtres avec compteurs, pied Settings | sélection d'un workspace change la colonne 2 |
+| D3 | Liste des tâches : recherche, groupes, sélection, bouton nouvelle tâche | ouverture d'une tâche met à jour l'URL et la colonne 3 |
+| D4 | Panneau tâche : en-tête, fil, composer ancré texte + voix, création et follow-up | run pi suivi en direct depuis le desktop |
+| D5 | Menu "…", panneau diff, Settings dans la colonne 3, raccourcis Échap | diff consultable, tâche renommée depuis le desktop |
+| D6 | Captures de contrôle à 1280 et 1600 px, redéploiement Vercel | maquette et rendu côte à côte |
+
+Estimation : D0 est la phase la plus risquée (refactor du mobile), les autres sont additives.
