@@ -207,7 +207,7 @@ Source : "Agent Console Desktop.dc.html" dans la seconde version du zip. Fenêtr
 
 ### Bascule mobile / desktop
 
-- Point de rupture unique : largeur de viewport ≥ 960 px et pointeur fin → desktop. En dessous, l'interface mobile actuelle, inchangée.
+- Point de rupture unique : largeur de viewport ≥ 960 px et (pointeur fin ou orientation paysage) → desktop, ce qui inclut un iPad en paysage. En dessous, l'interface mobile actuelle, inchangée.
 - Détection par `matchMedia` dans un petit store `layout.svelte.ts`, réévaluée au redimensionnement. Pas de choix manuel en v1.
 - Mêmes routes dans les deux modes. En desktop, `/` sélectionne le premier workspace, `/w/:ws` affiche la liste sans tâche active, `/w/:ws/t/:id` sélectionne la tâche, `/settings` affiche Settings dans la colonne 3. La barre latérale et la colonne 2 restent montées quelle que soit la route : l'état (recherche, filtre, scroll) survit à la navigation.
 
