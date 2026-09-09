@@ -1,5 +1,6 @@
 mod api;
 mod config;
+mod git;
 mod pi;
 mod repos;
 mod store;
