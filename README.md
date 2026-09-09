@@ -65,6 +65,7 @@ L'URL à saisir dans la PWA est alors `https://<machine>.<tailnet>.ts.net`.
 2. Settings : ajouter chaque machine (nom, URL, token). La PWA ouverte depuis une machine peut piloter les autres.
 3. Settings : coller une clé API OpenAI pour la dictée (transcription temps réel, la clé reste dans le navigateur).
 4. Workspaces : choisir une machine, puis "Plan, ask, build…" pour lancer une tâche dans un repo.
+5. Dans la bulle de composition, « + » permet de joindre une image (JPEG, PNG, WebP ou GIF, 5 Mio maximum), avec ou sans texte. L’aperçu peut être retiré avant l’envoi. Le modèle pi choisi doit accepter les images.
 
 ## Développement
 

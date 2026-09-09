@@ -2,7 +2,7 @@
   import { tick } from 'svelte';
   import { keyboard } from '../lib/keyboard.svelte';
   import { settings } from '../lib/settings.svelte';
-  import type { Repo } from '../lib/types';
+  import type { ImageContent, Repo } from '../lib/types';
   import { VoiceSession, voiceAvailable } from '../lib/voice';
   import Icon from './Icon.svelte';
 
@@ -14,7 +14,7 @@
     model?: string | null;
     repos?: Repo[];
     onRepoChange?: (name: string) => void;
-    onSubmit: (text: string) => Promise<void> | void;
+    onSubmit: (text: string, images: ImageContent[]) => Promise<void> | void;
     open?: boolean;
   }
 
@@ -23,6 +23,10 @@
 
   let draft = $state('');
   let sending = $state(false);
+  let image = $state<ImageContent | null>(null);
+  let imageInput: HTMLInputElement;
+  let imageLoading = $state(false);
+  let imageError = $state<string | null>(null);
   let textarea = $state<HTMLTextAreaElement | null>(null);
   let mode = $state<'text' | 'voice'>('text');
   let transcript = $state('');
@@ -31,7 +35,7 @@
   let voice: VoiceSession | null = null;
   let ticker: ReturnType<typeof setInterval> | undefined;
 
-  const hasDraft = $derived(draft.trim().length > 0);
+  const hasDraft = $derived(draft.trim().length > 0 || image !== null);
   const timer = $derived(`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
   const canVoice = $derived(voiceAvailable() && settings.openaiKey !== '');
 
@@ -98,15 +102,47 @@
     mode = 'text';
   }
 
+  async function chooseImage(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    imageError = null;
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      imageError = 'Choose a JPEG, PNG, WebP or GIF image.';
+      return;
+    }
+    if (!file.size || file.size > 5 * 1024 * 1024) {
+      imageError = 'Image must be non-empty and at most 5 MiB.';
+      return;
+    }
+    imageLoading = true;
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Could not read image.'));
+        reader.readAsDataURL(file);
+      });
+      image = { type: 'image', mimeType: file.type, data: dataUrl.slice(dataUrl.indexOf(',') + 1) };
+    } catch (err) {
+      imageError = (err as Error).message;
+    } finally {
+      imageLoading = false;
+    }
+  }
+
   async function submit() {
     const text = draft.trim();
-    if (!text || sending) return;
+    if ((!text && !image) || sending || imageLoading) return;
     sending = true;
     textarea?.blur();
     open = false;
     try {
-      await onSubmit(text);
+      await onSubmit(text, image ? [image] : []);
       draft = '';
+      image = null;
+      imageError = null;
     } catch {
       // The parent displays the error; keep the draft available for retry.
       open = true;
@@ -126,6 +162,8 @@
     void startVoice();
   }
 </script>
+
+<input hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" bind:this={imageInput} onchange={chooseImage} />
 
 {#if !open}
   <div class="idle" style:bottom="calc(var(--safe-bottom) + 14px + {keyboard.height}px)">
@@ -176,15 +214,24 @@
           enterkeyhint="send"
         ></textarea>
       {/if}
+      {#if image}
+        <div class="attachment">
+          <img src={`data:${image.mimeType};base64,${image.data}`} alt="Attachment preview" />
+          <button disabled={sending} onclick={() => (image = null)} aria-label="Remove image">Remove image</button>
+        </div>
+      {/if}
+      {#if imageLoading}<div class="voice-error">Loading image…</div>{/if}
+      {#if imageError}<div class="voice-error" role="alert">{imageError}</div>{/if}
       {#if voiceError}
         <div class="voice-error">{voiceError}</div>
       {/if}
 
       <div class="bar">
         <div class="left">
-          <span class="round round--filled small" aria-hidden="true">
+          <button class="round round--filled small" aria-label="Attach image" title="Attach image"
+            disabled={sending || imageLoading || mode === 'voice'} onclick={() => imageInput.click()}>
             <Icon name="plus" color="var(--ink-control)" />
-          </span>
+          </button>
           {#if model}
             <span class="model">
               <span>{model}</span>
@@ -199,7 +246,7 @@
             <span class="wave"><i></i><i></i><i></i><i></i><i></i></span>
           </button>
         {:else if hasDraft}
-          <button class="round send" aria-label="Send" disabled={sending} onclick={submit}>
+          <button class="round send" aria-label="Send" disabled={sending || imageLoading} onclick={submit}>
             <Icon name="send" color="#fff" />
           </button>
         {:else}
@@ -213,6 +260,19 @@
 {/if}
 
 <style>
+  .attachment {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .attachment img {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 10px;
+  }
   .idle {
     position: absolute;
     left: 14px;

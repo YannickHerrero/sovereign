@@ -1,6 +1,6 @@
 import { api, connectEvents } from './api';
 import { settings, type Server } from './settings.svelte';
-import type { RunEvent, ServerEvent, TaskSummary } from './types';
+import type { ImageContent, RunEvent, ServerEvent, TaskSummary } from './types';
 
 type RunListener = (taskId: string, event: RunEvent) => void;
 
@@ -13,7 +13,7 @@ export class WorkspaceStore {
 
   private listeners = new Set<RunListener>();
   /** First prompt of tasks created from this client, shown until pi has persisted it. */
-  private firstPrompts = new Map<string, string>();
+  private firstPrompts = new Map<string, { text: string; images: ImageContent[] }>();
   private disconnect: (() => void) | null = null;
   private refCount = 0;
 
@@ -39,11 +39,11 @@ export class WorkspaceStore {
     return this.tasks.find((t) => t.id === id);
   }
 
-  rememberFirstPrompt(taskId: string, text: string) {
-    this.firstPrompts.set(taskId, text);
+  rememberFirstPrompt(taskId: string, text: string, images: ImageContent[] = []) {
+    this.firstPrompts.set(taskId, { text, images });
   }
 
-  firstPrompt(taskId: string): string | undefined {
+  firstPrompt(taskId: string) {
     return this.firstPrompts.get(taskId);
   }
 

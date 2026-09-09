@@ -4,7 +4,7 @@
   import { api } from '../lib/api';
   import { router } from '../lib/router.svelte';
   import { FILTERS, group, stateMeta, type Filter } from '../lib/tasks';
-  import type { Repo } from '../lib/types';
+  import type { ImageContent, Repo } from '../lib/types';
   import type { WorkspaceStore } from '../lib/workspace.svelte';
 
   let { store }: { store: WorkspaceStore } = $props();
@@ -42,16 +42,16 @@
     filterIx = (filterIx + 1) % FILTERS.length;
   }
 
-  async function create(message: string) {
+  async function create(message: string, images: ImageContent[]) {
     if (!repo) {
       error = 'Choose a repo first';
       throw new Error(error);
     }
     error = null;
     try {
-      const task = await api.createTask(store.server, repo, message);
+      const task = await api.createTask(store.server, repo, message, images);
       store.upsert(task);
-      store.rememberFirstPrompt(task.id, message);
+      store.rememberFirstPrompt(task.id, message, images);
       router.go({ name: 'chat', wsId: store.server.id, taskId: task.id });
     } catch (err) {
       error = (err as Error).message;

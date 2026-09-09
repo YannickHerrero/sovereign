@@ -1,5 +1,5 @@
 import type { Server } from './settings.svelte';
-import type { FileDiff, Repo, ServerEvent, TaskDetail, TaskSummary, Workspace } from './types';
+import type { ImageContent, FileDiff, Repo, ServerEvent, TaskDetail, TaskSummary, Workspace } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -47,9 +47,10 @@ export const api = {
   tasks: (s: Server) => request<TaskSummary[]>(s, 'GET', '/tasks'),
   task: (s: Server, id: string) => request<TaskDetail>(s, 'GET', `/tasks/${id}`),
   diff: (s: Server, id: string) => request<{ files: FileDiff[] }>(s, 'GET', `/tasks/${id}/diff`),
-  createTask: (s: Server, repo: string, message: string) =>
-    request<TaskSummary>(s, 'POST', '/tasks', { repo, message }),
-  prompt: (s: Server, id: string, message: string) => request<void>(s, 'POST', `/tasks/${id}/prompt`, { message }),
+  createTask: (s: Server, repo: string, message: string, images: ImageContent[] = []) =>
+    request<TaskSummary>(s, 'POST', '/tasks', { repo, message, images }),
+  prompt: (s: Server, id: string, message: string, images: ImageContent[] = []) =>
+    request<void>(s, 'POST', `/tasks/${id}/prompt`, { message, images }),
   abort: (s: Server, id: string) => request<void>(s, 'POST', `/tasks/${id}/abort`),
   patchTask: (s: Server, id: string, patch: { pinned?: boolean; title?: string }) =>
     request<TaskSummary>(s, 'PATCH', `/tasks/${id}`, patch),

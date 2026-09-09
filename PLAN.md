@@ -167,4 +167,6 @@ Chaque phase se termine par un état qui tourne. Commits atomiques à l'intérie
 
 ## 6. Hors périmètre v1
 
-Notifications push, création de PR, branches par tâche, affichage des tool calls bruts, changement de modèle, pièces jointes via "+", multi-utilisateur, hub central.
+Notifications push, création de PR, branches par tâche, affichage des tool calls bruts, changement de modèle, pièces jointes autres que les images, multi-utilisateur, hub central.
+
+Ajout après la v1 : le « + » du composer permet de joindre une image (JPEG, PNG, WebP ou GIF, 5 Mio maximum), avec aperçu et retrait avant envoi. L’API transmet les blocs image à pi pour les nouveaux prompts et les follow-ups ; les images sont aussi affichées dans l’historique.

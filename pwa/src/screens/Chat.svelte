@@ -7,7 +7,7 @@
   import { ago } from '../lib/format';
   import { blocks } from '../lib/markdown';
   import { router } from '../lib/router.svelte';
-  import type { FileDiff, RunEvent, TaskDetail, TouchedFile, Turn } from '../lib/types';
+  import type { ImageContent, FileDiff, RunEvent, TaskDetail, TouchedFile, Turn } from '../lib/types';
   import type { WorkspaceStore } from '../lib/workspace.svelte';
 
   let { store, taskId }: { store: WorkspaceStore; taskId: string } = $props();
@@ -55,7 +55,7 @@
       detail = await api.task(store.server, taskId);
       turns = detail.turns;
       const first = store.firstPrompt(taskId);
-      if (turns.length === 0 && first) turns = [{ role: 'user', text: first, at: detail.created_at }];
+      if (turns.length === 0 && first) turns = [{ role: 'user', ...first, at: detail.created_at }];
       error = null;
       if (detail.state === 'working' && !live) live = { status: 'Working…', text: '', files: [] };
       await scrollToEnd();
@@ -108,13 +108,13 @@
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
 
-  async function send(text: string) {
+  async function send(text: string, images: ImageContent[]) {
     error = null;
-    const optimistic: Turn = { role: 'user', text, at: Date.now() };
+    const optimistic: Turn = { role: 'user', text, images, at: Date.now() };
     turns.push(optimistic);
     void scrollToEnd();
     try {
-      await api.prompt(store.server, taskId, text);
+      await api.prompt(store.server, taskId, text, images);
     } catch (err) {
       turns = turns.filter((t) => t !== optimistic);
       error = (err as Error).message;
@@ -213,7 +213,12 @@
   <div class="scroll thread" bind:this={scroller}>
     {#each turns as turn, index (index)}
       {#if turn.role === 'user'}
-        <div class="user">{turn.text}</div>
+        <div class="user">
+          {#each turn.images ?? [] as image}
+            <img class="message-image" src={`data:${image.mimeType};base64,${image.data}`} alt="Attachment" />
+          {/each}
+          {turn.text}
+        </div>
       {:else}
         <div class="agent">
           <div class="meta">{metaLabel(turn)}</div>
@@ -302,6 +307,14 @@
 </div>
 
 <style>
+  .message-image {
+    display: block;
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    border-radius: 10px;
+    margin-bottom: 8px;
+  }
   .topbar {
     padding-bottom: 4px;
   }

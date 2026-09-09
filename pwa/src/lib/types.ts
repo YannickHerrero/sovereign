@@ -14,8 +14,14 @@ export interface TaskSummary {
 
 export type RunStatus = 'settled' | 'error' | 'aborted';
 
+export interface ImageContent {
+  type: 'image';
+  data: string;
+  mimeType: string;
+}
+
 export type Turn =
-  | { role: 'user'; text: string; at: number }
+  | { role: 'user'; text: string; at: number; images?: ImageContent[] }
   | { role: 'agent'; text: string; files: string[]; at: number; status: RunStatus };
 
 export interface TouchedFile {
