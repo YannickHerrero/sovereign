@@ -11,5 +11,11 @@ pwa/dist/
 .idea/
 .DS_Store
 
+# Local credentials and agent settings (independent of global Git excludes)
+.env
+.env.*
+!.env.example
+**/.claude/settings.local.json
+
 # Vercel
-pwa/.vercel/
+.vercel/
