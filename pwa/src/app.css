@@ -1,6 +1,260 @@
+:root {
+  --bg: #f7f6f3;
+  --bg-outer: #edebe6;
+  --surface: #ffffff;
+  --bubble: #efede8;
+  --ink: #221f1c;
+  --ink-strong: #1c1a17;
+  --ink-body: #39362f;
+  --ink-icon: #3d3b37;
+  --ink-control: #4a473f;
+  --ink-mono: #5b574e;
+  --muted: #8b8880;
+  --muted-2: #9c9990;
+  --muted-3: #a5a29a;
+  --muted-4: #b0ada4;
+  --muted-5: #c9c6bd;
+  --chevron: #c2bfb6;
+  --accent: #2c6fbb;
+  --accent-hover: #1f5691;
+  --green: #2e8b57;
+  --red: #c4483c;
+  --purple: #7a5aa8;
+  --orange: #c8863c;
+  --dark: #22201c;
+  --hairline: rgba(0, 0, 0, 0.035);
+  --press: rgba(0, 0, 0, 0.05);
+  --press-strong: rgba(0, 0, 0, 0.1);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --font: "Helvetica Neue", Helvetica, system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
 body {
   margin: 0;
-  background: #f7f6f3;
-  color: #221f1c;
-  font-family: "Helvetica Neue", Helvetica, system-ui, sans-serif;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14.5px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+#app {
+  height: 100%;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(26px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.28;
+  }
+}
+
+@keyframes shimmerText {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -40% 0;
+  }
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Shared primitives used across screens */
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.screen--slide {
+  animation: slideIn 0.26s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 14px) 16px 6px;
+}
+
+.title {
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--ink);
+}
+
+.subtitle {
+  margin-top: 5px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.round {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  transition: background 0.12s ease;
+}
+
+.round:active {
+  background: var(--press-strong);
+}
+
+.round--filled {
+  background: var(--press);
+}
+
+.round--raised {
+  width: 36px;
+  height: 36px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07);
+}
+
+.round--raised:active {
+  background: #f2f0ec;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.dot--pulse {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  animation: pulseDot 1.5s ease-in-out infinite;
+}
+
+.sep {
+  opacity: 0.55;
+}
+
+.plus {
+  color: var(--green);
+}
+
+.minus {
+  color: var(--red);
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+.field {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: var(--press);
+  border-radius: 12px;
+  padding: 10px 13px;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+
+.field::placeholder {
+  color: var(--muted-3);
 }
