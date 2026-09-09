@@ -15,7 +15,7 @@ Console mobile pour piloter des sessions pi à distance. Deux parties dans ce mo
 | Diff | Stats `+n -m` et diff complet via git sur le working tree du repo. "View PR" devient "View diff". |
 | Réseau | Tailscale. HTTPS via `tailscale serve`. Auth par token statique (Bearer). |
 | Voix | Transcription temps réel OpenAI Realtime, clé saisie dans la page Settings de la PWA, stockée dans le navigateur. |
-| Modèle et branche | Affichage seul dans le composer (modèle courant de la session pi, branche git du repo). |
+| Modèle et branche | Modèle sélectionnable via le RPC pi ; branche git affichée seulement. |
 | Approbations | pi est autonome. Une carte générique pour `extension_ui_request` est prévue en dernière phase, seulement si un cas réel apparaît. |
 | Notifications push | Hors v1. |
 | Git | Petits commits atomiques tout au long du développement. Auteur : yannick.herrero@proton.me (config locale du repo). |
@@ -88,8 +88,11 @@ Parser qui suit la branche active : partir de la dernière entrée et remonter l
 |---|---|---|
 | GET | `/workspace` | nom, version, nombre de tâches working, uptime |
 | GET | `/repos` | dossiers de `repos_root` : nom, est un repo git, branche courante |
+| GET | `/models?repo=…` | modèles disponibles et modèle courant via un pi éphémère sans session, dans le contexte du repo |
+| GET | `/tasks/:id/models` | modèles disponibles et modèle courant de la session pi |
+| POST | `/tasks/:id/model` | `{ provider, id }` : change le modèle via `set_model`, refusé pendant une exécution |
 | GET | `/tasks` | liste avec état, stats, pinned, updated_at |
-| POST | `/tasks` | `{ repo, message }` : crée la tâche, lance pi, envoie le prompt. Titre provisoire = début du message, puis titre généré (voir ci-dessous). |
+| POST | `/tasks` | `{ repo, message, images?, model?: { provider, id } }` : crée la tâche, lance pi, envoie le prompt. Titre provisoire = début du message, puis titre généré (voir ci-dessous). |
 | GET | `/tasks/:id` | détail : tours, état, modèle, branche |
 | POST | `/tasks/:id/prompt` | `{ message }` : follow-up. Si pi est en train de streamer, envoyé en `follow_up` (file d'attente). |
 | POST | `/tasks/:id/abort` | abort du run en cours |
@@ -133,7 +136,7 @@ Fond `#F7F6F3`, fond extérieur `#EDEBE6`, texte `#221f1c` / `#39362f`, secondai
 ### Composer
 
 - Idle : pilule "+", placeholder, micro.
-- Texte : feuille montante, en-tête `repo` + branche (affichage), textarea, "+" inactif, modèle (affichage), bouton envoyer ou micro.
+- Texte : feuille montante, en-tête `repo` + branche (affichage), textarea, "+" pour joindre une image, sélecteur de modèle pi avec recherche, bouton envoyer ou micro.
 - Création depuis la liste : la feuille montre un sélecteur de repo à la place de l'en-tête `repo main`. Seul ajout fonctionnel par rapport à la maquette, indispensable pour créer une tâche.
 - Vocal : voir ci-dessous. Au stop, le transcript devient le brouillon en mode texte, comme la maquette.
 
@@ -167,7 +170,7 @@ Chaque phase se termine par un état qui tourne. Commits atomiques à l'intérie
 
 ## 6. Hors périmètre v1
 
-Notifications push, création de PR, branches par tâche, affichage des tool calls bruts, changement de modèle, pièces jointes autres que les images, multi-utilisateur, hub central.
+Notifications push, création de PR, branches par tâche, affichage des tool calls bruts, pièces jointes autres que les images, multi-utilisateur, hub central.
 
 Ajout après la v1 : le « + » du composer permet de joindre une image (JPEG, PNG, WebP ou GIF, 5 Mio maximum), avec aperçu et retrait avant envoi. L’API transmet les blocs image à pi pour les nouveaux prompts et les follow-ups ; les images sont aussi affichées dans l’historique.
 

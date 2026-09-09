@@ -67,6 +67,14 @@ L'URL à saisir dans la PWA est alors `https://<machine>.<tailnet>.ts.net`.
 4. Workspaces : choisir une machine, puis "Plan, ask, build…" pour lancer une tâche dans un repo.
 5. Dans la bulle de composition, « + » permet de joindre une image (JPEG, PNG, WebP ou GIF, 5 Mio maximum), avec ou sans texte. L’aperçu peut être retiré avant l’envoi. Le modèle pi choisi doit accepter les images.
 
+### Choisir le modèle
+
+Dans le composer mobile ou desktop, cliquer sur le nom du modèle (ou « Pi default ») et sa flèche pour ouvrir la liste fournie par pi sur la machine choisie. La recherche filtre par nom, identifiant ou fournisseur ; « Images » indique les modèles compatibles avec les pièces jointes.
+
+Pour une nouvelle tâche, le choix est appliqué avant le premier message. Dans une discussion existante, il change réellement le modèle de la session et reste enregistré dans l’historique pi. Attendre la fin de l’exécution ou arrêter l’agent avant de changer de modèle. Les erreurs d’authentification restent affichées dans le sélecteur sans remplacer le modèle courant.
+
+Comme le sélecteur natif de pi, la commande `set_model` met aussi à jour son modèle par défaut pour les futures sessions sur cette machine.
+
 ## Développement
 
 ```sh

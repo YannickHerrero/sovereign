@@ -1,5 +1,5 @@
 import type { Server } from './settings.svelte';
-import type { ImageContent, FileDiff, Repo, ServerEvent, TaskDetail, TaskSummary, Workspace } from './types';
+import type { ModelList, ModelRef, PiModel, ImageContent, FileDiff, Repo, ServerEvent, TaskDetail, TaskSummary, Workspace } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -44,11 +44,17 @@ async function request<T>(server: Server, method: string, path: string, body?: u
 export const api = {
   workspace: (s: Server, timeoutMs = 4000) => request<Workspace>(s, 'GET', '/workspace', undefined, timeoutMs),
   repos: (s: Server) => request<Repo[]>(s, 'GET', '/repos'),
+  models: (s: Server, repo: string) =>
+    request<ModelList>(s, 'GET', `/models?repo=${encodeURIComponent(repo)}`, undefined, 65000),
+  taskModels: (s: Server, id: string) =>
+    request<ModelList>(s, 'GET', `/tasks/${id}/models`, undefined, 95000),
+  setModel: (s: Server, id: string, model: ModelRef) =>
+    request<PiModel>(s, 'POST', `/tasks/${id}/model`, model, 95000),
   tasks: (s: Server) => request<TaskSummary[]>(s, 'GET', '/tasks'),
   task: (s: Server, id: string) => request<TaskDetail>(s, 'GET', `/tasks/${id}`),
   diff: (s: Server, id: string) => request<{ files: FileDiff[] }>(s, 'GET', `/tasks/${id}/diff`),
-  createTask: (s: Server, repo: string, message: string, images: ImageContent[] = []) =>
-    request<TaskSummary>(s, 'POST', '/tasks', { repo, message, images }),
+  createTask: (s: Server, repo: string, message: string, images: ImageContent[] = [], model?: ModelRef | null) =>
+    request<TaskSummary>(s, 'POST', '/tasks', { repo, message, images, ...(model ? { model } : {}) }, 125000),
   prompt: (s: Server, id: string, message: string, images: ImageContent[] = []) =>
     request<void>(s, 'POST', `/tasks/${id}/prompt`, { message, images }),
   abort: (s: Server, id: string) => request<void>(s, 'POST', `/tasks/${id}/abort`),

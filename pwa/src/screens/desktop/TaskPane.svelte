@@ -87,6 +87,9 @@
     repo={summary?.repo ?? ''}
     branch={session.detail?.branch}
     model={session.detail?.model}
+    loadModels={() => session.models()}
+    onModelChange={(model) => session.changeModel(model)}
+    modelDisabled={session.working}
     onSubmit={(text, images) => session.send(text, images)}
   />
 

@@ -14,6 +14,21 @@ export interface TaskSummary {
 
 export type RunStatus = 'settled' | 'error' | 'aborted';
 
+export interface ModelRef {
+  provider: string;
+  id: string;
+}
+
+export interface PiModel extends ModelRef {
+  name: string;
+  input: string[];
+}
+
+export interface ModelList {
+  models: PiModel[];
+  current: PiModel | null;
+}
+
 export interface ImageContent {
   type: 'image';
   data: string;
@@ -62,7 +77,8 @@ export type RunEvent =
   | { kind: 'file_touched'; path: string }
   | { kind: 'settled'; turn: Turn }
   | { kind: 'error'; message: string }
-  | { kind: 'ui_request'; request: UiRequest };
+  | { kind: 'ui_request'; request: UiRequest }
+  | { kind: 'model_changed'; model: PiModel };
 
 export interface UiRequest {
   id: string;

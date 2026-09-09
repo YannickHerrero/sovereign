@@ -1,7 +1,8 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import { ComposerState, isSubmitShortcut, type SubmitHandler } from '../lib/composer.svelte';
-  import type { Repo } from '../lib/types';
+  import type { ModelList, PiModel, Repo } from '../lib/types';
+  import ModelPicker from './ModelPicker.svelte';
   import Icon from './Icon.svelte';
 
   interface Props {
@@ -9,6 +10,9 @@
     repo: string;
     branch?: string | null;
     model?: string | null;
+    loadModels: () => Promise<ModelList>;
+    onModelChange: (model: PiModel) => Promise<void> | void;
+    modelDisabled?: boolean;
     /** When given, the repo chip becomes a picker (new task). */
     repos?: Repo[];
     onRepoChange?: (name: string) => void;
@@ -16,9 +20,10 @@
     autofocus?: boolean;
   }
 
-  let { placeholder, repo, branch = null, model = null, repos, onRepoChange, onSubmit, autofocus = false }: Props = $props();
+  let { placeholder, repo, branch = null, model = null, loadModels, onModelChange, modelDisabled = false, repos, onRepoChange, onSubmit, autofocus = false }: Props = $props();
 
   const c = new ComposerState();
+  let modelBusy = $state(false);
   let imageInput: HTMLInputElement;
   let textarea = $state<HTMLTextAreaElement | null>(null);
 
@@ -56,7 +61,7 @@
   }
 
   async function submit() {
-    if (!c.hasDraft || c.busy) return;
+    if (!c.hasDraft || c.busy || modelBusy) return;
     await c.submit(onSubmit);
     await focusEnd();
   }
@@ -122,12 +127,7 @@
         <button class="attach" aria-label="Attach image" title="Attach image" disabled={c.busy || c.mode === 'voice'} onclick={() => imageInput.click()}>
           <Icon name="plus" color="var(--ink-control)" />
         </button>
-        {#if model}
-          <span class="model">
-            <span>{model}</span>
-            <Icon name="chevron" color="var(--muted-3)" />
-          </span>
-        {/if}
+        <ModelPicker {model} {loadModels} {onModelChange} disabled={modelDisabled || c.busy || c.mode === 'voice'} bind:busy={modelBusy} />
       </div>
       {#if c.mode === 'voice'}
         <button class="record" aria-label="Stop recording" onclick={stopVoice}>
@@ -140,7 +140,7 @@
           <button class="mic" aria-label="Voice" onclick={mic}>
             <Icon name="mic" color="var(--ink-control)" />
           </button>
-          <button class="send" class:ready={c.hasDraft && !c.busy} aria-label="Send" disabled={!c.hasDraft || c.busy} onclick={submit}>
+          <button class="send" class:ready={c.hasDraft && !c.busy && !modelBusy} aria-label="Send" disabled={!c.hasDraft || c.busy || modelBusy} onclick={submit}>
             <Icon name="send" color="#fff" />
           </button>
         </div>
@@ -259,16 +259,6 @@
   }
   .attach:disabled {
     opacity: 0.5;
-  }
-  .model {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12.5px;
-    color: var(--ink-control);
-    white-space: nowrap;
-    padding: 5px 9px;
-    border-radius: 8px;
   }
   .mic,
   .send {

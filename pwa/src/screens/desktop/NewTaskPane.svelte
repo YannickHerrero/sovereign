@@ -2,13 +2,14 @@
   import DockedComposer from '../../components/DockedComposer.svelte';
   import { api } from '../../lib/api';
   import { router } from '../../lib/router.svelte';
-  import type { ImageContent, Repo } from '../../lib/types';
+  import type { ImageContent, PiModel, Repo } from '../../lib/types';
   import type { WorkspaceStore } from '../../lib/workspace.svelte';
 
   let { store }: { store: WorkspaceStore } = $props();
 
   let repos = $state<Repo[]>([]);
   let repo = $state('');
+  let selectedModel = $state<PiModel | null>(null);
   let error = $state<string | null>(null);
 
   const branch = $derived(repos.find((r) => r.name === repo)?.branch ?? null);
@@ -23,6 +24,11 @@
       .catch((err: Error) => (error = err.message));
   });
 
+  async function loadModels() {
+    const list = await api.models(store.server, repo);
+    return { ...list, current: selectedModel ?? list.current };
+  }
+
   async function create(message: string, images: ImageContent[]) {
     if (!repo) {
       error = 'Choose a repo first';
@@ -30,7 +36,7 @@
     }
     error = null;
     try {
-      const task = await api.createTask(store.server, repo, message, images);
+      const task = await api.createTask(store.server, repo, message, images, selectedModel);
       store.upsert(task);
       store.rememberFirstPrompt(task.id, message, images);
       router.go({ name: 'chat', wsId: store.server.id, taskId: task.id });
@@ -53,7 +59,10 @@
       {#if error}<p class="error">{error}</p>{/if}
     </div>
   </div>
-  <DockedComposer placeholder="Plan, ask, build…" {repo} {branch} {repos} onRepoChange={(name) => (repo = name)} onSubmit={create} autofocus />
+  <DockedComposer placeholder="Plan, ask, build…" {repo} {branch} {repos}
+    onRepoChange={(name) => { repo = name; selectedModel = null; }}
+    model={selectedModel?.id} {loadModels} onModelChange={(model) => { selectedModel = model; }}
+    modelDisabled={!repo} onSubmit={create} autofocus />
 </div>
 
 <style>

@@ -2,7 +2,8 @@
   import { tick } from 'svelte';
   import { ComposerState, isSubmitShortcut, type SubmitHandler } from '../lib/composer.svelte';
   import { keyboard } from '../lib/keyboard.svelte';
-  import type { Repo } from '../lib/types';
+  import type { ModelList, PiModel, Repo } from '../lib/types';
+  import ModelPicker from './ModelPicker.svelte';
   import Icon from './Icon.svelte';
 
   interface Props {
@@ -11,16 +12,20 @@
     repo: string;
     branch?: string | null;
     model?: string | null;
+    loadModels: () => Promise<ModelList>;
+    onModelChange: (model: PiModel) => Promise<void> | void;
+    modelDisabled?: boolean;
     repos?: Repo[];
     onRepoChange?: (name: string) => void;
     onSubmit: SubmitHandler;
     open?: boolean;
   }
 
-  let { placeholder, repo, branch = null, model = null, repos, onRepoChange, onSubmit, open = $bindable(false) }: Props =
+  let { placeholder, repo, branch = null, model = null, loadModels, onModelChange, modelDisabled = false, repos, onRepoChange, onSubmit, open = $bindable(false) }: Props =
     $props();
 
   const c = new ComposerState();
+  let modelBusy = $state(false);
   let imageInput: HTMLInputElement;
   let textarea = $state<HTMLTextAreaElement | null>(null);
 
@@ -39,6 +44,7 @@
   }
 
   function close() {
+    if (modelBusy) return;
     c.cancelVoice();
     open = false;
   }
@@ -66,7 +72,7 @@
   }
 
   async function submit() {
-    if (!c.hasDraft || c.busy) return;
+    if (!c.hasDraft || c.busy || modelBusy) return;
     textarea?.blur();
     open = false;
     const sent = await c.submit(onSubmit);
@@ -151,12 +157,7 @@
             disabled={c.busy || c.mode === 'voice'} onclick={() => imageInput.click()}>
             <Icon name="plus" color="var(--ink-control)" />
           </button>
-          {#if model}
-            <span class="model">
-              <span>{model}</span>
-              <Icon name="chevron" color="var(--muted-3)" />
-            </span>
-          {/if}
+          <ModelPicker {model} {loadModels} {onModelChange} disabled={modelDisabled || c.busy || c.mode === 'voice'} bind:busy={modelBusy} />
         </div>
         {#if c.mode === 'voice'}
           <button class="record" aria-label="Stop recording" onclick={stopVoice}>
@@ -165,7 +166,7 @@
             <span class="wave"><i></i><i></i><i></i><i></i><i></i></span>
           </button>
         {:else if c.hasDraft}
-          <button class="round send" aria-label="Send" disabled={c.busy} onclick={submit}>
+          <button class="round send" aria-label="Send" disabled={c.busy || modelBusy} onclick={submit}>
             <Icon name="send" color="#fff" />
           </button>
         {:else}
@@ -293,14 +294,6 @@
   .small {
     width: 32px;
     height: 32px;
-  }
-  .model {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13.5px;
-    color: var(--ink-control);
-    white-space: nowrap;
   }
   .send {
     background: var(--dark);

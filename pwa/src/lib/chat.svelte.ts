@@ -1,6 +1,6 @@
 import { api } from './api';
 import { ago } from './format';
-import type { FileDiff, ImageContent, RunEvent, TaskDetail, TaskSummary, TouchedFile, Turn } from './types';
+import type { ModelRef, FileDiff, ImageContent, RunEvent, TaskDetail, TaskSummary, TouchedFile, Turn } from './types';
 import type { WorkspaceStore } from './workspace.svelte';
 
 export interface Live {
@@ -115,6 +115,9 @@ export class ChatSession {
         break;
       case 'ui_request':
         break;
+      case 'model_changed':
+        if (this.detail) this.detail.model = event.model.id;
+        return;
     }
     this.appended();
   }
@@ -131,6 +134,17 @@ export class ChatSession {
       this.error = (err as Error).message;
       throw err;
     }
+  }
+
+  async models() {
+    const list = await api.taskModels(this.store.server, this.taskId);
+    if (this.detail) this.detail.model = list.current?.id ?? null;
+    return list;
+  }
+
+  async changeModel(model: ModelRef) {
+    const selected = await api.setModel(this.store.server, this.taskId, model);
+    if (this.detail) this.detail.model = selected.id;
   }
 
   async openDiff() {

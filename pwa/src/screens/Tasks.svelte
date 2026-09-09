@@ -4,7 +4,7 @@
   import { api } from '../lib/api';
   import { router } from '../lib/router.svelte';
   import { FILTERS, group, stateMeta, type Filter } from '../lib/tasks';
-  import type { ImageContent, Repo } from '../lib/types';
+  import type { ImageContent, PiModel, Repo } from '../lib/types';
   import type { WorkspaceStore } from '../lib/workspace.svelte';
 
   let { store }: { store: WorkspaceStore } = $props();
@@ -15,6 +15,7 @@
   let repos = $state<Repo[]>([]);
   let repo = $state('');
   let composerOpen = $state(false);
+  let selectedModel = $state<PiModel | null>(null);
   let error = $state<string | null>(null);
 
   const filter = $derived<Filter>(FILTERS[filterIx]);
@@ -42,6 +43,11 @@
     filterIx = (filterIx + 1) % FILTERS.length;
   }
 
+  async function loadModels() {
+    const list = await api.models(store.server, repo);
+    return { ...list, current: selectedModel ?? list.current };
+  }
+
   async function create(message: string, images: ImageContent[]) {
     if (!repo) {
       error = 'Choose a repo first';
@@ -49,7 +55,7 @@
     }
     error = null;
     try {
-      const task = await api.createTask(store.server, repo, message, images);
+      const task = await api.createTask(store.server, repo, message, images, selectedModel);
       store.upsert(task);
       store.rememberFirstPrompt(task.id, message, images);
       router.go({ name: 'chat', wsId: store.server.id, taskId: task.id });
@@ -142,7 +148,11 @@
     {repo}
     {branch}
     {repos}
-    onRepoChange={(name) => (repo = name)}
+    onRepoChange={(name) => { repo = name; selectedModel = null; }}
+    model={selectedModel?.id}
+    {loadModels}
+    onModelChange={(model) => { selectedModel = model; }}
+    modelDisabled={!repo}
     onSubmit={create}
   />
 </div>
