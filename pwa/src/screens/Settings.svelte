@@ -4,6 +4,9 @@
   import { router } from '../lib/router.svelte';
   import { settings } from '../lib/settings.svelte';
 
+  /** Rendered inside the desktop shell: no back button, content centered. */
+  let { embedded = false }: { embedded?: boolean } = $props();
+
   let name = $state('');
   let url = $state('');
   let token = $state('');
@@ -47,12 +50,14 @@
   }
 </script>
 
-<div class="screen screen--slide">
-  <div class="topbar">
-    <button class="round round--filled" aria-label="Back" onclick={() => router.back({ name: 'workspaces' })}>
-      <Icon name="back" color="var(--ink-icon)" />
-    </button>
-  </div>
+<div class="screen" class:screen--slide={!embedded} class:embedded>
+  {#if !embedded}
+    <div class="topbar">
+      <button class="round round--filled" aria-label="Back" onclick={() => router.back({ name: 'workspaces' })}>
+        <Icon name="back" color="var(--ink-icon)" />
+      </button>
+    </div>
+  {/if}
   <div class="heading">
     <div class="title">Settings</div>
     <div class="subtitle">Machines and voice</div>
@@ -99,6 +104,18 @@
 </div>
 
 <style>
+  .embedded {
+    background: #fbfaf8;
+  }
+  .embedded .heading,
+  .embedded .body {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .embedded .heading {
+    padding-top: 28px;
+  }
   .heading {
     padding: 0 22px 2px;
   }
