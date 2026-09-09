@@ -26,7 +26,7 @@ cd ../server
 cargo install --path .
 ```
 
-Premier lancement : `sovereign-server` crée `~/.config/sovereign/config.toml` avec un token aléatoire.
+Premier lancement : `sovereign-server` crée `~/.config/sovereign/config.toml` avec un token aléatoire. Sur Unix, le fichier est créé avec les permissions `0600` (lecture/écriture réservées au propriétaire) ; ces permissions sont aussi appliquées aux configurations existantes à chaque démarrage.
 
 ```toml
 name = "wsl odk"          # nom affiché dans l'écran Workspaces

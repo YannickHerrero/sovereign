@@ -1,4 +1,9 @@
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+
+#[cfg(unix)]
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -37,7 +42,12 @@ impl Config {
     /// Loads the config file, writing a fresh default one on first run.
     pub fn load_or_create(path: &Path) -> Result<Self> {
         if path.exists() {
-            let raw = std::fs::read_to_string(path)
+            let mut file = File::open(path)
+                .with_context(|| format!("opening {}", path.display()))?;
+            #[cfg(unix)]
+            protect_config(&file, path)?;
+            let mut raw = String::new();
+            file.read_to_string(&mut raw)
                 .with_context(|| format!("reading {}", path.display()))?;
             let mut config: Config =
                 toml::from_str(&raw).with_context(|| format!("parsing {}", path.display()))?;
@@ -48,20 +58,77 @@ impl Config {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(path, toml::to_string_pretty(&config)?)
+        // Set the mode at creation time: never briefly expose the token via the umask.
+        // create_new also prevents overwriting a config created by another process.
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        options.mode(0o600);
+        let mut file = options.open(path)
+            .with_context(|| format!("creating {}", path.display()))?;
+        #[cfg(unix)]
+        protect_config(&file, path)?;
+        file.write_all(toml::to_string_pretty(&config)?.as_bytes())
             .with_context(|| format!("writing {}", path.display()))?;
         tracing::info!("created default config at {}", path.display());
         Ok(config)
     }
 }
 
+#[cfg(unix)]
+fn protect_config(file: &File, path: &Path) -> Result<()> {
+    file.set_permissions(std::fs::Permissions::from_mode(0o600))
+        .with_context(|| format!("restricting permissions on {}", path.display()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    struct TestConfig(PathBuf);
+
+    impl TestConfig {
+        fn new() -> Self {
+            let dir = std::env::temp_dir().join(format!("sovereign-config-{}", uuid::Uuid::new_v4()));
+            std::fs::create_dir_all(&dir).unwrap();
+            Self(dir.join("config.toml"))
+        }
+    }
+
+    impl Drop for TestConfig {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(self.0.parent().unwrap());
+        }
+    }
+
     #[test]
     fn default_listener_is_loopback_only() {
         assert_eq!(Config::default().listen, "127.0.0.1:7777");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn new_config_is_private_and_token_survives_reload() {
+        let path = TestConfig::new();
+        let config = Config::load_or_create(&path.0).unwrap();
+        assert_eq!(std::fs::metadata(&path.0).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(config.token.len(), 48);
+        assert_eq!(Config::load_or_create(&path.0).unwrap().token, config.token);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn existing_config_permissions_are_restricted_without_rewriting() {
+        let path = TestConfig::new();
+        let config = Config { listen: "127.0.0.1:8888".into(), ..Config::default() };
+        let original = toml::to_string_pretty(&config).unwrap();
+        std::fs::write(&path.0, &original).unwrap();
+        std::fs::set_permissions(&path.0, std::fs::Permissions::from_mode(0o644)).unwrap();
+        let loaded = Config::load_or_create(&path.0).unwrap();
+        assert_eq!(std::fs::metadata(&path.0).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(loaded.listen, config.listen);
+        assert_eq!(loaded.token, config.token);
+        assert_eq!(std::fs::read_to_string(&path.0).unwrap(), original);
     }
 }
 
