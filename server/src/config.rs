@@ -17,7 +17,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             name: hostname(),
-            listen: "0.0.0.0:7777".into(),
+            listen: "127.0.0.1:7777".into(),
             token: random_token(),
             repos_root: home().join("dev"),
             pi_bin: "pi".into(),
@@ -52,6 +52,16 @@ impl Config {
             .with_context(|| format!("writing {}", path.display()))?;
         tracing::info!("created default config at {}", path.display());
         Ok(config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_listener_is_loopback_only() {
+        assert_eq!(Config::default().listen, "127.0.0.1:7777");
     }
 }
 

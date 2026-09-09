@@ -30,7 +30,7 @@ Premier lancement : `sovereign-server` crée `~/.config/sovereign/config.toml` a
 
 ```toml
 name = "wsl odk"          # nom affiché dans l'écran Workspaces
-listen = "0.0.0.0:7777"
+listen = "127.0.0.1:7777"
 token = "..."             # à saisir dans la PWA
 repos_root = "~/dev"      # chaque sous-dossier est un repo proposé à la création d'une tâche
 pi_bin = "pi"
@@ -49,6 +49,8 @@ loginctl enable-linger $USER   # pour une machine sans session ouverte
 ```
 
 ## Exposer en HTTPS avec Tailscale
+
+Le serveur écoute uniquement sur localhost par défaut ; Tailscale Serve assure l’accès distant. Une configuration existante conserve sa valeur `listen` : remplacer `0.0.0.0:7777` par `127.0.0.1:7777` pour bénéficier de cette protection.
 
 Le micro (voix) et l'installation en PWA exigent HTTPS. Tailscale fournit un certificat pour le nom de la machine :
 
