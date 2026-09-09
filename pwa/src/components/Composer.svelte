@@ -102,11 +102,22 @@
     mode = 'text';
   }
 
-  async function chooseImage(event: Event) {
+  function chooseImage(event: Event) {
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
+    if (file) void attachImage(file);
+  }
+
+  function onPaste(event: ClipboardEvent) {
+    const file = Array.from(event.clipboardData?.files ?? []).find((file) => file.type.startsWith('image/'));
     if (!file) return;
+    event.preventDefault();
+    void attachImage(file);
+  }
+
+  async function attachImage(file: File) {
+    if (sending || imageLoading) return;
     imageError = null;
     if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
       imageError = 'Choose a JPEG, PNG, WebP or GIF image.';
@@ -211,6 +222,7 @@
           {placeholder}
           rows="3"
           onkeydown={onKeydown}
+          onpaste={onPaste}
           enterkeyhint="send"
         ></textarea>
       {/if}
