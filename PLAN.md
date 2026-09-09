@@ -149,6 +149,8 @@ Connexion directe navigateur vers l'API Realtime OpenAI en WebSocket, sous-proto
 
 Chaque phase se termine par un état qui tourne. Commits atomiques à l'intérieur de chaque phase (un commit par brique).
 
+État au 9 septembre 2026 : phases 0 à 9 livrées et vérifiées (tests automatisés serveur, captures d'écran headless de chaque écran, run pi de bout en bout). Phase 10 non démarrée : aucune extension pi installée n'utilise de dialogue bloquant. Reste à valider sur iPhone réel : clavier iOS, dictée vocale, installation en HTTPS via Tailscale.
+
 | # | Phase | Livrable vérifiable |
 |---|---|---|
 | 0 | Scaffold monorepo : `server/` (cargo init), `pwa/` (Svelte + Vite), README, .gitignore, ce plan | `cargo build`, `pnpm build` passent |
