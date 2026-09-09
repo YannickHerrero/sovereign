@@ -12,9 +12,13 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::config::Config;
 use crate::repos;
+use crate::store::Store;
+
+mod tasks;
 
 pub struct AppState {
     pub config: Config,
+    pub store: Store,
     pub started_at: Instant,
 }
 
@@ -24,6 +28,8 @@ pub fn router(state: SharedState) -> Router {
     let api = Router::new()
         .route("/workspace", get(workspace))
         .route("/repos", get(list_repos))
+        .route("/tasks", get(tasks::list))
+        .route("/tasks/{id}", get(tasks::detail))
         .layer(middleware::from_fn_with_state(state.clone(), require_token))
         .with_state(state);
 
@@ -87,6 +93,10 @@ pub struct ApiError {
 impl ApiError {
     pub fn internal(message: impl Into<String>) -> Self {
         Self { status: StatusCode::INTERNAL_SERVER_ERROR, message: message.into() }
+    }
+
+    pub fn not_found(message: impl Into<String>) -> Self {
+        Self { status: StatusCode::NOT_FOUND, message: message.into() }
     }
 }
 
