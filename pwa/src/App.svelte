@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { layout } from './lib/layout.svelte';
   import { router } from './lib/router.svelte';
   import { workspaceStore } from './lib/workspace.svelte';
+  import Shell from './screens/desktop/Shell.svelte';
   import Settings from './screens/Settings.svelte';
   import Chat from './screens/Chat.svelte';
   import Tasks from './screens/Tasks.svelte';
@@ -15,7 +17,9 @@
 </script>
 
 <div class="frame">
-  {#if route.name === 'settings'}
+  {#if layout.desktop}
+    <Shell />
+  {:else if route.name === 'settings'}
     <Settings />
   {:else if route.name === 'tasks' && store}
     <Tasks {store} />
