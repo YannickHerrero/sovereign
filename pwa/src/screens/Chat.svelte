@@ -20,6 +20,7 @@
 
   let detail = $state<TaskDetail | null>(null);
   let turns = $state<Turn[]>([]);
+  let expandedFiles = $state<Record<number, boolean>>({});
   let live = $state<Live | null>(null);
   let error = $state<string | null>(null);
   let menuOpen = $state(false);
@@ -242,7 +243,7 @@
           {/if}
           {#if turn.files.length}
             <div class="files">
-              {#each turn.files as path (path)}
+              {#each expandedFiles[index] ? turn.files : turn.files.slice(0, 3) as path (path)}
                 {@const stats = index === lastAgentIndex ? statsFor(path) : undefined}
                 <div class="file">
                   <span class="path">{path}</span>
@@ -251,6 +252,12 @@
                   {/if}
                 </div>
               {/each}
+              {#if turn.files.length > 3}
+                <button class="show-files" aria-expanded={!!expandedFiles[index]}
+                  onclick={() => (expandedFiles[index] = !expandedFiles[index])}>
+                  {expandedFiles[index] ? 'Show less' : `Show more (${turn.files.length - 3})`}
+                </button>
+              {/if}
             </div>
           {/if}
         </div>
@@ -439,6 +446,13 @@
     gap: 10px;
     padding: 9px 12px;
     background: var(--bg);
+  }
+  .show-files {
+    padding: 9px 12px;
+    background: var(--bg);
+    color: var(--accent);
+    font-size: 12px;
+    text-align: left;
   }
   .path {
     font-family: var(--mono);
