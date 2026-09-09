@@ -5,20 +5,23 @@ use axum::extract::{Request, State};
 use axum::http::{header, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::Serialize;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::config::Config;
 use crate::repos;
+use crate::pi::manager::Agents;
 use crate::store::Store;
 
 mod tasks;
+mod ws;
 
 pub struct AppState {
     pub config: Config,
-    pub store: Store,
+    pub store: Arc<Store>,
+    pub agents: Arc<Agents>,
     pub started_at: Instant,
 }
 
@@ -28,8 +31,12 @@ pub fn router(state: SharedState) -> Router {
     let api = Router::new()
         .route("/workspace", get(workspace))
         .route("/repos", get(list_repos))
-        .route("/tasks", get(tasks::list))
-        .route("/tasks/{id}", get(tasks::detail))
+        .route("/tasks", get(tasks::list).post(tasks::create))
+        .route("/tasks/{id}", get(tasks::detail).patch(tasks::patch).delete(tasks::delete))
+        .route("/tasks/{id}/prompt", post(tasks::prompt))
+        .route("/tasks/{id}/abort", post(tasks::abort))
+        .route("/tasks/{id}/ui-response", post(tasks::ui_response))
+        .route("/ws", get(ws::upgrade))
         .layer(middleware::from_fn_with_state(state.clone(), require_token))
         .with_state(state);
 
@@ -72,7 +79,7 @@ async fn workspace(State(state): State<SharedState>) -> Json<Workspace> {
         name: state.config.name.clone(),
         version: env!("CARGO_PKG_VERSION"),
         uptime_secs: state.started_at.elapsed().as_secs(),
-        agents_running: 0,
+        agents_running: state.agents.working_count(),
     })
 }
 
@@ -97,6 +104,10 @@ impl ApiError {
 
     pub fn not_found(message: impl Into<String>) -> Self {
         Self { status: StatusCode::NOT_FOUND, message: message.into() }
+    }
+
+    pub fn bad_request(message: impl Into<String>) -> Self {
+        Self { status: StatusCode::BAD_REQUEST, message: message.into() }
     }
 }
 
