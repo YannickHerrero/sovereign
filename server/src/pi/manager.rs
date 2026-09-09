@@ -10,6 +10,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use tokio::sync::{broadcast, mpsc};
 
+use super::models::{self, Model, ModelList, ModelRef};
 use super::process::PiProcess;
 use super::session::{self, RunStatus, Turn};
 use crate::config::Config;
@@ -35,6 +36,7 @@ pub enum RunEvent {
     Settled { turn: Turn },
     Error { message: String },
     UiRequest { request: Value },
+    ModelChanged { model: Model },
 }
 
 struct Agent {
@@ -120,6 +122,26 @@ impl Agents {
         Ok(())
     }
 
+    pub async fn models(self: &Arc<Self>, task: &Task) -> Result<ModelList> {
+        let process = self.ensure_agent(task).await?;
+        let result = models::list(&process).await;
+        self.touch(&task.id);
+        result
+    }
+
+    pub async fn set_model(self: &Arc<Self>, task: &Task, model: &ModelRef) -> Result<Model> {
+        let process = self.ensure_agent(task).await?;
+        // Do not switch underneath an in-flight LLM request.
+        let state = process.command(json!({"type": "get_state"})).await?;
+        if state.get("isStreaming").and_then(Value::as_bool) == Some(true) {
+            return Err(anyhow!("Wait for the agent to finish or stop it before changing model"));
+        }
+        let model = models::set(&process, model).await?;
+        self.touch(&task.id);
+        self.emit(&task.id, RunEvent::ModelChanged { model: model.clone() });
+        Ok(model)
+    }
+
     pub async fn abort(&self, task_id: &str) -> Result<()> {
         let process = self.process_of(task_id).ok_or_else(|| anyhow!("no agent running"))?;
         process.command(json!({ "type": "abort" })).await?;
@@ -164,12 +186,12 @@ impl Agents {
             return Ok(process);
         }
         let (tx, rx) = mpsc::channel(256);
-        let args = vec![
-            "--session-id".to_string(),
-            task.session_id.clone(),
-            "--name".to_string(),
-            task.title.clone(),
-        ];
+        let mut args = if let Some(file) = task.session_file.as_ref().filter(|file| file.exists()) {
+            vec!["--session".to_string(), file.to_string_lossy().into_owned()]
+        } else {
+            vec!["--session-id".to_string(), task.session_id.clone()]
+        };
+        args.extend(["--name".to_string(), task.title.clone()]);
         let process = PiProcess::spawn(&self.config.pi_bin, &task.cwd, &args, tx).await?;
         let agent = Agent {
             process: process.clone(),

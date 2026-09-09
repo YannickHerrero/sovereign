@@ -15,6 +15,7 @@ use crate::repos;
 use crate::pi::manager::Agents;
 use crate::store::Store;
 
+mod models;
 mod tasks;
 mod ws;
 
@@ -31,9 +32,12 @@ pub fn router(state: SharedState) -> Router {
     let api = Router::new()
         .route("/workspace", get(workspace))
         .route("/repos", get(list_repos))
+        .route("/models", get(models::list))
         .route("/tasks", get(tasks::list).post(tasks::create))
         .route("/tasks/{id}", get(tasks::detail).patch(tasks::patch).delete(tasks::delete))
         .route("/tasks/{id}/prompt", post(tasks::prompt))
+        .route("/tasks/{id}/models", get(tasks::models))
+        .route("/tasks/{id}/model", post(tasks::set_model))
         .route("/tasks/{id}/abort", post(tasks::abort))
         .route("/tasks/{id}/diff", get(tasks::diff))
         .route("/tasks/{id}/ui-response", post(tasks::ui_response))

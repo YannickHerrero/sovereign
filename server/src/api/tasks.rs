@@ -7,6 +7,7 @@ use serde_json::Value;
 use super::{ApiError, SharedState};
 use crate::git;
 use crate::pi::{image::{self, ImageContent}, session, session::Turn, title};
+use crate::pi::models::{Model, ModelList, ModelRef};
 use crate::repos;
 use crate::store::{now_ms, Task, TouchedFile};
 use crate::tasks::{provisional_title, TaskSummary};
@@ -57,6 +58,7 @@ pub async fn detail(
 pub struct CreateTask {
     repo: String,
     message: String,
+    model: Option<ModelRef>,
     #[serde(default)]
     images: Vec<ImageContent>,
 }
@@ -90,6 +92,14 @@ pub async fn create(
     state.store.insert(task.clone()).map_err(|e| ApiError::internal(e.to_string()))?;
     state.agents.broadcast_task(&task);
 
+    if let Some(model) = &body.model {
+        if let Err(err) = state.agents.set_model(&task, model).await {
+            state.agents.stop(&task.id).await;
+            state.store.remove(&task.id).map_err(|e| ApiError::internal(e.to_string()))?;
+            state.agents.broadcast_removed(&task.id);
+            return Err(ApiError::bad_request(format!("selecting model: {err}")));
+        }
+    }
     if let Err(err) = state.agents.prompt(&task, &message, &body.images).await {
         return Err(ApiError::internal(format!("starting pi: {err}")));
     }
@@ -98,6 +108,25 @@ pub async fn create(
     }
     let task = state.store.get(&task.id).unwrap_or(task);
     Ok((StatusCode::CREATED, Json(state.agents.summary(&task))))
+}
+
+pub async fn models(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+) -> Result<Json<ModelList>, ApiError> {
+    let task = load(&state, &id)?;
+    state.agents.models(&task).await.map(Json)
+        .map_err(|e| ApiError::internal(format!("listing pi models: {e}")))
+}
+
+pub async fn set_model(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+    Json(model): Json<ModelRef>,
+) -> Result<Json<Model>, ApiError> {
+    let task = load(&state, &id)?;
+    state.agents.set_model(&task, &model).await.map(Json)
+        .map_err(|e| ApiError::bad_request(format!("selecting model: {e}")))
 }
 
 #[derive(Deserialize)]
