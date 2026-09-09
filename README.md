@@ -37,6 +37,8 @@ pi_bin = "pi"
 idle_kill_secs = 600      # arrêt d'un process pi inactif
 ```
 
+Le serveur refuse de démarrer si le token configuré est vide ou ne contient que des espaces. Conserver le token généré ou le remplacer par un secret fort ; ne pas utiliser la valeur d’exemple `"..."`.
+
 Les tâches sont enregistrées dans `~/.local/share/sovereign/tasks.json`. Les sessions restent dans le dossier de pi (`~/.pi/agent/sessions/`), donc visibles aussi avec `pi -r` dans le repo.
 
 ## Lancer au démarrage

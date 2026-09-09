@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
-use anyhow::{Context, Result};
+use anyhow::{ensure, Context, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +51,7 @@ impl Config {
                 .with_context(|| format!("reading {}", path.display()))?;
             let mut config: Config =
                 toml::from_str(&raw).with_context(|| format!("parsing {}", path.display()))?;
+            ensure!(!config.token.trim().is_empty(), "config token must not be empty or whitespace");
             config.repos_root = expand_home(&config.repos_root);
             return Ok(config);
         }
@@ -104,6 +105,27 @@ mod tests {
     #[test]
     fn default_listener_is_loopback_only() {
         assert_eq!(Config::default().listen, "127.0.0.1:7777");
+    }
+
+    #[test]
+    fn rejects_empty_or_whitespace_tokens_without_replacing_them() {
+        let path = TestConfig::new();
+        for token in ["", " ", "\t\r\n", "\u{2003}"] {
+            let config = Config { token: token.into(), ..Config::default() };
+            let original = toml::to_string_pretty(&config).unwrap();
+            std::fs::write(&path.0, &original).unwrap();
+            let error = Config::load_or_create(&path.0).unwrap_err();
+            assert!(error.to_string().contains("token must not be empty"));
+            assert_eq!(std::fs::read_to_string(&path.0).unwrap(), original);
+        }
+    }
+
+    #[test]
+    fn accepts_an_existing_nonempty_token() {
+        let path = TestConfig::new();
+        let config = Config { token: "existing-test-token".into(), ..Config::default() };
+        std::fs::write(&path.0, toml::to_string_pretty(&config).unwrap()).unwrap();
+        assert_eq!(Config::load_or_create(&path.0).unwrap().token, config.token);
     }
 
     #[cfg(unix)]

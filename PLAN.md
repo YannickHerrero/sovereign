@@ -43,7 +43,7 @@ axum, tokio, tokio-tungstenite (via axum ws), serde, serde_json, rust-embed (PWA
 ```toml
 name = "wsl odk"          # nom affiché dans Workspaces
 listen = "127.0.0.1:7777"
-token = "..."             # généré au premier lancement si absent
+token = "..."             # généré avec le nouveau fichier ; un token vide est refusé
 repos_root = "~/dev"
 pi_bin = "pi"             # optionnel
 idle_kill_secs = 600      # arrêt d'un process pi inactif
