@@ -35,6 +35,7 @@ pub fn router(state: SharedState) -> Router {
         .route("/tasks/{id}", get(tasks::detail).patch(tasks::patch).delete(tasks::delete))
         .route("/tasks/{id}/prompt", post(tasks::prompt))
         .route("/tasks/{id}/abort", post(tasks::abort))
+        .route("/tasks/{id}/diff", get(tasks::diff))
         .route("/tasks/{id}/ui-response", post(tasks::ui_response))
         .route("/ws", get(ws::upgrade))
         .layer(middleware::from_fn_with_state(state.clone(), require_token))

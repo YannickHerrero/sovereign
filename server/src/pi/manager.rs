@@ -13,7 +13,8 @@ use tokio::sync::{broadcast, mpsc};
 use super::process::PiProcess;
 use super::session::{self, RunStatus, Turn};
 use crate::config::Config;
-use crate::store::{LastRun, Store, Task, TouchedFile};
+use crate::git;
+use crate::store::{Baseline, Store, Task, TouchedFile};
 use crate::tasks::{summarize, TaskSummary};
 
 #[derive(Debug, Clone, Serialize)]
@@ -49,6 +50,8 @@ struct RunAcc {
     files: Vec<String>,
     status: RunStatus,
     at: u64,
+    /// Change counts since the task baseline when this run started.
+    run_start: Option<git::Counts>,
 }
 
 pub struct Agents {
@@ -228,7 +231,9 @@ impl Agents {
         match kind {
             "agent_start" => {
                 streaming.store(true, Ordering::Relaxed);
-                self.runs.lock().unwrap().insert(task_id.to_string(), RunAcc::default());
+                let run_start = self.ensure_baseline(task_id).await;
+                let acc = RunAcc { run_start, ..RunAcc::default() };
+                self.runs.lock().unwrap().insert(task_id.to_string(), acc);
                 self.emit(task_id, RunEvent::AgentStart);
                 self.emit(task_id, RunEvent::Status { text: "Thinking…".into() });
                 if let Some(task) = self.store.get(task_id) {
@@ -327,19 +332,34 @@ impl Agents {
     async fn settle(&self, task_id: &str, forced: Option<RunStatus>) {
         let acc = self.runs.lock().unwrap().remove(task_id).unwrap_or_default();
         let status = forced.unwrap_or(acc.status);
-        let touched_files = acc
-            .files
-            .iter()
-            .map(|path| TouchedFile { path: path.clone(), plus: 0, minus: 0 })
-            .collect();
+        let baseline = self.store.get(task_id).and_then(|t| t.baseline);
+        let after = match &baseline {
+            Some(b) => self.counts_since(task_id, b.head.clone()).await,
+            None => None,
+        };
+        // Not a git repo: fall back to the files pi's write/edit tools named.
+        let fallback = || acc.files.iter().map(|p| TouchedFile { path: p.clone(), plus: 0, minus: 0 }).collect();
+        let (task_files, run_files): (Vec<TouchedFile>, Vec<String>) = match (&baseline, &after, &acc.run_start) {
+            (Some(b), Some(after), Some(start)) => (
+                git::touched(&b.files, after),
+                git::touched(start, after).into_iter().map(|f| f.path).collect(),
+            ),
+            (Some(b), Some(after), None) => {
+                let files = git::touched(&b.files, after);
+                let paths = files.iter().map(|f| f.path.clone()).collect();
+                (files, paths)
+            }
+            _ => (fallback(), acc.files.clone()),
+        };
         let now = crate::store::now_ms();
         let updated = self.store.update(task_id, |t| {
             t.updated_at = now;
-            t.last_run = Some(LastRun { status, touched_files });
+            t.last_status = Some(status);
+            t.touched_files = task_files;
         });
         let turn = Turn::Agent {
             text: acc.text,
-            files: acc.files,
+            files: run_files,
             at: if acc.at > 0 { acc.at } else { now },
             status,
         };
@@ -347,6 +367,25 @@ impl Agents {
         if let Ok(Some(task)) = updated {
             self.broadcast_task(&task);
         }
+    }
+
+    /// Captures the task baseline on the first run, then returns the current counts since it.
+    async fn ensure_baseline(&self, task_id: &str) -> Option<git::Counts> {
+        let task = self.store.get(task_id)?;
+        if let Some(baseline) = task.baseline {
+            return self.counts_since(task_id, baseline.head).await;
+        }
+        let cwd = task.cwd;
+        let snapshot = tokio::task::spawn_blocking(move || git::snapshot(&cwd)).await.ok().flatten()?;
+        let files = snapshot.files.clone();
+        let baseline = Baseline { head: snapshot.head, files: snapshot.files };
+        let _ = self.store.update(task_id, |t| t.baseline = Some(baseline));
+        Some(files)
+    }
+
+    async fn counts_since(&self, task_id: &str, base: Option<String>) -> Option<git::Counts> {
+        let cwd = self.store.get(task_id)?.cwd;
+        tokio::task::spawn_blocking(move || git::counts_since(&cwd, base.as_deref())).await.ok().flatten()
     }
 
     fn emit(&self, task_id: &str, event: RunEvent) {

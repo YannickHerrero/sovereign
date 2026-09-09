@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::{ApiError, SharedState};
-use crate::pi::session::{self, Turn};
+use crate::git;
+use crate::pi::{session, session::Turn, title};
 use crate::repos;
 use crate::store::{now_ms, Task, TouchedFile};
 use crate::tasks::{provisional_title, TaskSummary};
@@ -47,7 +48,7 @@ pub async fn detail(
         summary: state.agents.summary(&task),
         model: session.model,
         branch,
-        touched_files: task.last_run.as_ref().map(|r| r.touched_files.clone()).unwrap_or_default(),
+        touched_files: task.touched_files.clone(),
         turns: session.turns,
     }))
 }
@@ -79,7 +80,9 @@ pub async fn create(
         pinned: false,
         created_at: now,
         updated_at: now,
-        last_run: None,
+        last_status: None,
+        baseline: None,
+        touched_files: Vec::new(),
     };
     state.store.insert(task.clone()).map_err(|e| ApiError::internal(e.to_string()))?;
     state.agents.broadcast_task(&task);
@@ -87,6 +90,7 @@ pub async fn create(
     if let Err(err) = state.agents.prompt(&task, &message).await {
         return Err(ApiError::internal(format!("starting pi: {err}")));
     }
+    tokio::spawn(generate_title(state.clone(), task.id.clone(), message));
     let task = state.store.get(&task.id).unwrap_or(task);
     Ok((StatusCode::CREATED, Json(state.agents.summary(&task))))
 }
@@ -112,6 +116,45 @@ pub async fn prompt(
         .await
         .map_err(|e| ApiError::internal(format!("sending prompt: {e}")))?;
     Ok(StatusCode::ACCEPTED)
+}
+
+/// Replaces the provisional title with one written by pi, unless the user renamed the task first.
+async fn generate_title(state: SharedState, task_id: String, message: String) {
+    let provisional = provisional_title(&message);
+    let title = match title::generate(&state.config.pi_bin, &message).await {
+        Ok(title) => title,
+        Err(err) => {
+            tracing::warn!(task_id, "title generation failed: {err}");
+            return;
+        }
+    };
+    let updated = state.store.update(&task_id, |t| {
+        if t.title == provisional {
+            t.title = title.clone();
+        }
+    });
+    if let Ok(Some(task)) = updated {
+        if task.title == title {
+            state.agents.rename(&task_id, &title).await;
+            state.agents.broadcast_task(&task);
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct DiffResponse {
+    files: Vec<git::FileDiff>,
+}
+
+pub async fn diff(State(state): State<SharedState>, Path(id): Path<String>) -> Result<Json<DiffResponse>, ApiError> {
+    let task = load(&state, &id)?;
+    let base = task.baseline.and_then(|b| b.head);
+    let files = task.touched_files;
+    let cwd = task.cwd;
+    let files = tokio::task::spawn_blocking(move || git::diffs(&cwd, base.as_deref(), &files))
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    Ok(Json(DiffResponse { files }))
 }
 
 pub async fn abort(State(state): State<SharedState>, Path(id): Path<String>) -> Result<StatusCode, ApiError> {

@@ -1,5 +1,6 @@
 //! Task metadata persisted as a single JSON file, rewritten atomically on every change.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -19,13 +20,18 @@ pub struct Task {
     pub pinned: bool,
     pub created_at: u64,
     pub updated_at: u64,
-    pub last_run: Option<LastRun>,
+    /// Outcome of the most recent run; None until the first run settles.
+    pub last_status: Option<RunStatus>,
+    /// Repo state before the task's first run. Files touched by the task are measured from it,
+    /// so pi's own commits are included.
+    pub baseline: Option<Baseline>,
+    pub touched_files: Vec<TouchedFile>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LastRun {
-    pub status: RunStatus,
-    pub touched_files: Vec<TouchedFile>,
+pub struct Baseline {
+    pub head: Option<String>,
+    pub files: BTreeMap<String, (u32, u32)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

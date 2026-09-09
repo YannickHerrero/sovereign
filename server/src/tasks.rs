@@ -32,20 +32,14 @@ pub fn summarize(task: &Task, working: bool) -> TaskSummary {
     let state = if working {
         TaskState::Working
     } else {
-        match &task.last_run {
+        match task.last_status {
             None => TaskState::Pending,
-            Some(run) => match run.status {
-                RunStatus::Error | RunStatus::Aborted => TaskState::Failed,
-                RunStatus::Settled if run.touched_files.is_empty() => TaskState::NoChanges,
-                RunStatus::Settled => TaskState::Done,
-            },
+            Some(RunStatus::Error | RunStatus::Aborted) => TaskState::Failed,
+            Some(RunStatus::Settled) if task.touched_files.is_empty() => TaskState::NoChanges,
+            Some(RunStatus::Settled) => TaskState::Done,
         }
     };
-    let (plus, minus) = task
-        .last_run
-        .as_ref()
-        .map(|r| r.touched_files.iter().fold((0, 0), |(p, m), f| (p + f.plus, m + f.minus)))
-        .unwrap_or((0, 0));
+    let (plus, minus) = task.touched_files.iter().fold((0, 0), |(p, m), f| (p + f.plus, m + f.minus));
     TaskSummary {
         id: task.id.clone(),
         repo: task.repo.clone(),
