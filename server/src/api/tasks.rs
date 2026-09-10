@@ -187,10 +187,36 @@ pub struct DiffResponse {
     files: Vec<git::FileDiff>,
 }
 
-pub async fn diff(State(state): State<SharedState>, Path(id): Path<String>) -> Result<Json<DiffResponse>, ApiError> {
+#[derive(Deserialize, Default)]
+pub struct DiffQuery {
+    /// Only this file's patch.
+    path: Option<String>,
+    /// Stats only, with empty patches: the client fetches patches file by file.
+    #[serde(default)]
+    summary: bool,
+}
+
+pub async fn diff(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+    axum::extract::Query(query): axum::extract::Query<DiffQuery>,
+) -> Result<Json<DiffResponse>, ApiError> {
     let task = load(&state, &id)?;
+    let mut files = task.touched_files;
+    if let Some(path) = &query.path {
+        files.retain(|f| &f.path == path);
+        if files.is_empty() {
+            return Err(ApiError::not_found("file is not part of this task's changes"));
+        }
+    }
+    if query.summary {
+        let files = files
+            .into_iter()
+            .map(|f| git::FileDiff { path: f.path, plus: f.plus, minus: f.minus, patch: String::new() })
+            .collect();
+        return Ok(Json(DiffResponse { files }));
+    }
     let base = task.baseline.and_then(|b| b.head);
-    let files = task.touched_files;
     let cwd = task.cwd;
     let files = tokio::task::spawn_blocking(move || git::diffs(&cwd, base.as_deref(), &files))
         .await
