@@ -27,14 +27,26 @@
   $effect(() => store.acquire());
 
   $effect(() => {
-    api
-      .repos(store.server)
+    const server = store.server;
+    let cancelled = false;
+    repos = [];
+    repo = '';
+    selectedModel = null;
+    api.repos(server)
       .then((list) => {
+        if (cancelled) return;
         repos = list;
-        if (!repo && list.length) repo = list[0].name;
+        repo = prefs.defaultRepo(server.id, list, repo);
       })
       .catch(() => {});
+    return () => { cancelled = true; };
   });
+
+  function chooseRepo(name: string) {
+    repo = name;
+    selectedModel = null;
+    prefs.selectRepo(store.server.id, name);
+  }
 
   function toggleSearch() {
     searchOpen = !searchOpen;
@@ -164,7 +176,7 @@
     {repo}
     {branch}
     {repos}
-    onRepoChange={(name) => { repo = name; selectedModel = null; }}
+    onRepoChange={chooseRepo}
     model={selectedModel?.id} agent={selectedModel?.agent}
     {loadModels}
     onModelChange={(model) => { selectedModel = model; }}

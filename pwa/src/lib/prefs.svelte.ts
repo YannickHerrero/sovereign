@@ -8,6 +8,8 @@ interface Persisted {
   collapsed: string[];
   /** Desktop conversation without the 720px column, like Notion's full width. */
   wide: boolean;
+  /** Last explicitly selected project per machine. */
+  lastRepos: Record<string, string>;
 }
 
 function load(): Persisted {
@@ -15,12 +17,17 @@ function load(): Persisted {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Persisted>;
-      return { grouping: parsed.grouping === 'repo' ? 'repo' : 'date', collapsed: parsed.collapsed ?? [], wide: parsed.wide === true };
+      return {
+        grouping: parsed.grouping === 'repo' ? 'repo' : 'date',
+        collapsed: parsed.collapsed ?? [],
+        wide: parsed.wide === true,
+        lastRepos: Object.fromEntries(Object.entries(parsed.lastRepos ?? {}).filter(([, value]) => typeof value === 'string')),
+      };
     }
   } catch {
     // Storage unavailable or corrupt: defaults.
   }
-  return { grouping: 'date', collapsed: [], wide: false };
+  return { grouping: 'date', collapsed: [], wide: false, lastRepos: {} };
 }
 
 const data = $state<Persisted>(load());
@@ -35,6 +42,14 @@ function persist() {
 
 /** Per-browser display preferences for the task list. */
 export const prefs = {
+  selectRepo(wsId: string, repo: string) {
+    data.lastRepos[wsId] = repo;
+    persist();
+  },
+  defaultRepo(wsId: string, repos: { name: string }[], proposed = ''): string {
+    const remembered = data.lastRepos[wsId];
+    return [proposed, remembered].find((name) => repos.some((repo) => repo.name === name)) ?? repos[0]?.name ?? '';
+  },
   get grouping(): Grouping {
     return data.grouping;
   },

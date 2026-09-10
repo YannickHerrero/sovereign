@@ -14,8 +14,7 @@
   $effect(() => {
     const proposed = store.proposedRepo;
     if (proposed) {
-      repo = proposed;
-      selectedModel = null;
+      chooseRepo(proposed);
       store.proposedRepo = null;
     }
   });
@@ -25,14 +24,26 @@
   const branch = $derived(repos.find((r) => r.name === repo)?.branch ?? null);
 
   $effect(() => {
-    api
-      .repos(store.server)
+    const server = store.server;
+    let cancelled = false;
+    repos = [];
+    repo = '';
+    selectedModel = null;
+    api.repos(server)
       .then((list) => {
+        if (cancelled) return;
         repos = list;
-        if (!list.some((r) => r.name === repo)) repo = list[0]?.name ?? '';
+        repo = prefs.defaultRepo(server.id, list, repo);
       })
-      .catch((err: Error) => (error = err.message));
+      .catch((err: Error) => { if (!cancelled) error = err.message; });
+    return () => { cancelled = true; };
   });
+
+  function chooseRepo(name: string) {
+    repo = name;
+    selectedModel = null;
+    prefs.selectRepo(store.server.id, name);
+  }
 
   async function loadModels() {
     const list = await api.models(store.server, repo);
@@ -70,7 +81,7 @@
     </div>
   </div>
   <DockedComposer placeholder="Plan, ask, build…" {repo} {branch} {repos}
-    onRepoChange={(name) => { repo = name; selectedModel = null; }}
+    onRepoChange={chooseRepo}
     model={selectedModel?.id} agent={selectedModel?.agent} {loadModels} onModelChange={(model) => { selectedModel = model; }}
     modelDisabled={!repo} onSubmit={create} draftKey="{store.server.id}/new" autofocus captureTyping wide={prefs.wide} />
 </div>
