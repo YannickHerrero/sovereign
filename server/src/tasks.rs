@@ -18,6 +18,7 @@ pub enum TaskState {
 #[derive(Debug, Clone, Serialize)]
 pub struct TaskSummary {
     pub id: String,
+    pub agent: crate::agent::AgentKind,
     pub repo: String,
     pub title: String,
     pub pinned: bool,
@@ -42,6 +43,7 @@ pub fn summarize(task: &Task, working: bool) -> TaskSummary {
     let (plus, minus) = task.touched_files.iter().fold((0, 0), |(p, m), f| (p + f.plus, m + f.minus));
     TaskSummary {
         id: task.id.clone(),
+        agent: task.agent,
         repo: task.repo.clone(),
         title: task.title.clone(),
         pinned: task.pinned,

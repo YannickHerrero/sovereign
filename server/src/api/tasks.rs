@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use super::{ApiError, SharedState};
 use crate::git;
-use crate::agent::{Model, ModelList, ModelRef, Turn};
+use crate::agent::{AgentKind, Model, ModelList, ModelRef, Turn};
 use crate::pi::image::{self, ImageContent};
 use crate::repos;
 use crate::store::{now_ms, Task, TouchedFile};
@@ -16,6 +16,7 @@ use crate::tasks::{provisional_title, TaskSummary};
 pub struct TaskDetail {
     #[serde(flatten)]
     pub summary: TaskSummary,
+    pub agent: AgentKind,
     pub model: Option<String>,
     pub branch: Option<String>,
     pub touched_files: Vec<TouchedFile>,
@@ -43,6 +44,7 @@ pub async fn detail(
     let session = session.map_err(|e| ApiError::internal(format!("reading session: {e}")))?;
     Ok(Json(TaskDetail {
         summary: state.agents.summary(&task),
+        agent: task.agent,
         model: session.model,
         branch,
         touched_files: task.touched_files.clone(),
@@ -54,6 +56,8 @@ pub async fn detail(
 pub struct CreateTask {
     repo: String,
     message: String,
+    #[serde(default)]
+    agent: AgentKind,
     model: Option<ModelRef>,
     #[serde(default)]
     images: Vec<ImageContent>,
@@ -71,9 +75,10 @@ pub async fn create(
     let repo = repos::find(&state.config.repos_root, &body.repo)
         .ok_or_else(|| ApiError::bad_request("unknown repo"))?;
     let now = now_ms();
+    state.agents.backend(body.agent).map_err(|e| ApiError::bad_request(e.to_string()))?;
     let task = Task {
         id: uuid::Uuid::new_v4().to_string(),
-        agent: Default::default(),
+        agent: body.agent,
         repo: repo.name,
         cwd: repo.path,
         session_id: uuid::Uuid::new_v4().to_string(),
@@ -98,7 +103,7 @@ pub async fn create(
         }
     }
     if let Err(err) = state.agents.prompt(&task, &message, &body.images).await {
-        return Err(ApiError::internal(format!("starting pi: {err}")));
+        return Err(ApiError::internal(format!("starting the agent: {err}")));
     }
     if !message.is_empty() {
         tokio::spawn(generate_title(state.clone(), task.id.clone(), task.agent, message));
@@ -113,7 +118,7 @@ pub async fn models(
 ) -> Result<Json<ModelList>, ApiError> {
     let task = load(&state, &id)?;
     state.agents.models(&task).await.map(Json)
-        .map_err(|e| ApiError::internal(format!("listing pi models: {e}")))
+        .map_err(|e| ApiError::internal(format!("listing models: {e}")))
 }
 
 pub async fn set_model(
