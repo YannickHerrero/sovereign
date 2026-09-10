@@ -86,6 +86,12 @@ Pour une nouvelle tâche, le choix est appliqué avant le premier message. Dans 
 
 Comme le sélecteur natif de pi, la commande `set_model` met aussi à jour son modèle par défaut pour les futures sessions sur cette machine.
 
+## Sur grand écran
+
+- Taper n'importe où dans une conversation écrit dans le composer, sauf si un champ, un dialogue ou un menu a la main. Le collage hors champ y va aussi, images comprises.
+- La liste des tâches se groupe par date ou par projet (segmenté sous le titre), choix mémorisé dans le navigateur.
+- "View diff" ouvre une vue plein panneau : arborescence des fichiers avec filtre, blocs par fichier avec numéros de ligne, mode unifié ou côte à côte, dépliage du contexte, coche "Viewed" mémorisée par tâche. Échap revient à la conversation.
+
 ## Développement
 
 ```sh

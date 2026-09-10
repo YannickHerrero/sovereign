@@ -428,3 +428,5 @@ Taille : 500 à 700 lignes PWA, une cinquantaine côté serveur.
 | F3c | Coloration syntaxique à la demande | seulement si le poids du bundle reste raisonnable |
 
 F1 et F2 se font dans la journée ; F3 est un chantier de l'ordre du desktop, à découper en deux livraisons.
+
+État au 10 septembre 2026 : F1, F2, F3a et F3b livrées. F1 vérifiée par huit contrôles Playwright (frappe capturée, Shift accepté, Ctrl ignoré, champ de recherche et dialogue et menu non capturés, nouvelle tâche). F2 vérifiée par tests unitaires et captures desktop et mobile. F3 vérifiée sur un diff réel à trois fichiers : arbre, unifié, côte à côte, dépliage de contexte avec numéros de ligne corrects, coche Viewed reflétée dans l'arbre, Échap qui revient à la conversation ; le mobile garde sa feuille. F3c (coloration syntaxique) non démarrée.
