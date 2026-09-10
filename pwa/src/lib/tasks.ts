@@ -5,9 +5,15 @@ export type Filter = null | 'Working' | 'Has changes' | 'Failed';
 
 export const FILTERS: Filter[] = [null, 'Working', 'Has changes', 'Failed'];
 
+export type Grouping = 'date' | 'repo';
+
 export interface Group {
+  /** Stable key for rendering and for remembering the collapsed state. */
+  key: string;
   label: string;
   items: TaskSummary[];
+  /** Number of tasks currently running in the group (repo grouping only). */
+  running: number;
 }
 
 export function matches(task: TaskSummary, query: string, filter: Filter): boolean {
@@ -26,10 +32,31 @@ export function group(tasks: TaskSummary[], query: string, filter: Filter, now =
   const today = sorted.filter((t) => !t.pinned && isToday(t.updated_at, now));
   const earlier = sorted.filter((t) => !t.pinned && !isToday(t.updated_at, now));
   return [
-    { label: 'Pinned', items: pinned },
-    { label: 'Today', items: today },
-    { label: 'Earlier', items: earlier },
+    { key: 'pinned', label: 'Pinned', items: pinned, running: 0 },
+    { key: 'today', label: 'Today', items: today, running: 0 },
+    { key: 'earlier', label: 'Earlier', items: earlier, running: 0 },
   ].filter((g) => g.items.length > 0);
+}
+
+/** One group per repo, most recently active repo first; pinned tasks lead inside a repo. */
+export function groupByRepo(tasks: TaskSummary[], query: string, filter: Filter): Group[] {
+  const byRepo = new Map<string, TaskSummary[]>();
+  for (const task of tasks) {
+    if (!matches(task, query, filter)) continue;
+    byRepo.set(task.repo, [...(byRepo.get(task.repo) ?? []), task]);
+  }
+  return [...byRepo.entries()]
+    .map(([repo, items]) => ({
+      key: `repo:${repo}`,
+      label: repo,
+      items: items.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updated_at - a.updated_at),
+      running: items.filter((t) => t.state === 'working').length,
+    }))
+    .sort((a, b) => Math.max(...b.items.map((t) => t.updated_at)) - Math.max(...a.items.map((t) => t.updated_at)));
+}
+
+export function groupTasks(grouping: Grouping, tasks: TaskSummary[], query: string, filter: Filter): Group[] {
+  return grouping === 'repo' ? groupByRepo(tasks, query, filter) : group(tasks, query, filter);
 }
 
 export interface StateMeta {
