@@ -160,7 +160,7 @@ pub async fn prompt(
     Ok(StatusCode::ACCEPTED)
 }
 
-/// Replaces the provisional title with one written by pi, unless the user renamed the task first.
+/// Replaces the provisional title with one written by the task’s harness, unless the user renamed the task first.
 async fn generate_title(state: SharedState, task_id: String, agent: crate::agent::AgentKind, message: String) {
     let provisional = provisional_title(&message);
     let title = match state.agents.generate_title(agent, &message).await {

@@ -46,7 +46,7 @@
 
   async function remove() {
     menuOpen = false;
-    if (!window.confirm('Delete this task? The pi session file is kept on the machine.')) return;
+    if (!window.confirm('Delete this task? The agent’s session file is kept on the machine.')) return;
     if (await session.remove()) router.replace({ name: 'tasks', wsId: store.server.id });
   }
 </script>
