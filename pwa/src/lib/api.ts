@@ -74,7 +74,7 @@ export const api = {
   prompt: (s: Server, id: string, message: string, images: ImageContent[] = []) =>
     request<void>(s, 'POST', `/tasks/${id}/prompt`, { message, images }),
   abort: (s: Server, id: string) => request<void>(s, 'POST', `/tasks/${id}/abort`),
-  patchTask: (s: Server, id: string, patch: { pinned?: boolean; title?: string }) =>
+  patchTask: (s: Server, id: string, patch: { pinned?: boolean; title?: string; seen?: true }) =>
     request<TaskSummary>(s, 'PATCH', `/tasks/${id}`, patch),
   deleteTask: (s: Server, id: string) => request<void>(s, 'DELETE', `/tasks/${id}`),
   uiResponse: (s: Server, id: string, response: Record<string, unknown>) =>

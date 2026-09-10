@@ -27,6 +27,8 @@ pub struct TaskSummary {
     pub minus: u32,
     pub created_at: u64,
     pub updated_at: u64,
+    /// The task finished a run the user has not opened since.
+    pub unread: bool,
 }
 
 pub fn summarize(task: &Task, working: bool) -> TaskSummary {
@@ -52,6 +54,7 @@ pub fn summarize(task: &Task, working: bool) -> TaskSummary {
         minus,
         created_at: task.created_at,
         updated_at: task.updated_at,
+        unread: task.updated_at > task.seen_at,
     }
 }
 

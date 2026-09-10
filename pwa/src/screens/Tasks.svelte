@@ -4,7 +4,7 @@
   import { api } from '../lib/api';
   import { router } from '../lib/router.svelte';
   import { prefs } from '../lib/prefs.svelte';
-  import { FILTERS, groupTasks, stateMeta, type Filter } from '../lib/tasks';
+  import { FILTERS, dotColor, groupTasks, stateMeta, type Filter } from '../lib/tasks';
   import type { ImageContent, PiModel, Repo } from '../lib/types';
   import type { WorkspaceStore } from '../lib/workspace.svelte';
 
@@ -127,7 +127,7 @@
             {#if t.state === 'working'}
               <span class="dot dot--pulse"></span>
             {:else}
-              <span class="dot" style:background={meta.dot}></span>
+              <span class="dot" style:background={dotColor(t)}></span>
             {/if}
           </div>
           <div class="main">

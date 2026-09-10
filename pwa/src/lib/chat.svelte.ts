@@ -89,6 +89,7 @@ export class ChatSession {
       if (this.turns.length === 0 && first) this.turns = [{ role: 'user', ...first, at: detail.created_at }];
       this.error = null;
       if (detail.state === 'working' && !this.live) this.live = { status: 'Working…', text: '', files: [] };
+      if (detail.unread) void this.markSeen();
       this.appended();
     } catch (err) {
       this.error = (err as Error).message;
@@ -241,8 +242,17 @@ export class ChatSession {
       const fresh = await api.task(this.store.server, this.taskId);
       this.detail = fresh;
       this.turns = fresh.turns;
+      if (fresh.unread) void this.markSeen();
     } catch {
       // Keep what we have.
+    }
+  }
+
+  private async markSeen() {
+    try {
+      this.store.upsert(await api.patchTask(this.store.server, this.taskId, { seen: true }));
+    } catch {
+      // The dot stays coloured until the next visit; not worth an error banner.
     }
   }
 

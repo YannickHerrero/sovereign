@@ -70,7 +70,7 @@ new file mode 100644
 export const task: TaskDetail = {
   id: 'dark-mode', agent: 'pi', repo: 'storefront',
   title: 'Ajouter le mode sombre', pinned: true, state: 'done',
-  plus: 28, minus: 1, created_at: now - 18 * minute, updated_at: now - 2 * minute,
+  plus: 28, minus: 1, created_at: now - 18 * minute, updated_at: now - 2 * minute, unread: false,
   model: 'claude-sonnet-4-5', branch: 'feat/dark-mode',
   touched_files: files.map(({ path, plus, minus }) => ({ path, plus, minus })),
   turns: [
@@ -85,7 +85,7 @@ export const task: TaskDetail = {
 
 export const tasks: TaskSummary[] = [
   task,
-  { ...task, id: 'navigation', title: 'Fluidifier la navigation mobile', agent: 'claude', pinned: false, plus: 42, minus: 12, updated_at: now - 32 * minute },
+  { ...task, id: 'navigation', title: 'Fluidifier la navigation mobile', agent: 'claude', pinned: false, plus: 42, minus: 12, updated_at: now - 32 * minute, unread: true },
   { ...task, id: 'checkout', title: 'Simplifier le parcours de commande', pinned: false, state: 'working', plus: 18, minus: 4, updated_at: now - minute },
   { ...task, id: 'tokens', repo: 'design-system', title: 'Harmoniser les espacements', pinned: false, plus: 36, minus: 18, updated_at: now - 60 * minute },
   { ...task, id: 'buttons', repo: 'design-system', title: 'Documenter les composants', agent: 'claude', pinned: false, plus: 64, minus: 0, updated_at: now - 120 * minute },

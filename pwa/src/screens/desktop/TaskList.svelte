@@ -2,7 +2,7 @@
   import Icon from '../../components/Icon.svelte';
   import { router } from '../../lib/router.svelte';
   import { prefs } from '../../lib/prefs.svelte';
-  import { groupTasks, stateMeta, type Filter } from '../../lib/tasks';
+  import { dotColor, groupTasks, stateMeta, type Filter } from '../../lib/tasks';
   import type { WorkspaceStore } from '../../lib/workspace.svelte';
 
   let { store, filter, activeTaskId }: { store: WorkspaceStore; filter: Filter; activeTaskId: string | undefined } = $props();
@@ -69,7 +69,7 @@
             {#if t.state === 'working'}
               <span class="dot dot--pulse"></span>
             {:else}
-              <span class="dot" style:background={meta.dot}></span>
+              <span class="dot" style:background={dotColor(t)}></span>
             {/if}
           </div>
           <div class="main">

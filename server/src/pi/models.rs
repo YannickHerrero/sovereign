@@ -70,7 +70,7 @@ mod tests {
         let task = crate::store::Task {
             id: "task".into(), agent: Default::default(), repo: "repo".into(), cwd: dir.clone(),
             session_id: uuid::Uuid::new_v4().to_string(), session_file: None,
-            title: "test".into(), pinned: false, created_at: 0, updated_at: 0,
+            title: "test".into(), pinned: false, created_at: 0, updated_at: 0, seen_at: 0,
             last_status: None, running: false, baseline: None, touched_files: vec![],
         };
         store.insert(task.clone()).unwrap();

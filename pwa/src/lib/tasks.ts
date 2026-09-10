@@ -63,21 +63,29 @@ export interface StateMeta {
   label: string;
   /** CSS color for the label */
   color: string;
-  /** CSS color for the idle dot */
-  dot: string;
 }
 
 export function stateMeta(state: TaskState): StateMeta {
   switch (state) {
     case 'working':
-      return { label: 'Working', color: 'var(--accent)', dot: 'var(--accent)' };
+      return { label: 'Working', color: 'var(--accent)' };
     case 'done':
-      return { label: '✓ Done', color: 'var(--muted-2)', dot: 'var(--green)' };
+      return { label: '✓ Done', color: 'var(--muted-2)' };
     case 'failed':
-      return { label: 'Failed', color: 'var(--muted-2)', dot: 'var(--red)' };
+      return { label: 'Failed', color: 'var(--muted-2)' };
     case 'no_changes':
-      return { label: 'No Changes', color: 'var(--muted-2)', dot: 'var(--muted-5)' };
+      return { label: 'No Changes', color: 'var(--muted-2)' };
     case 'pending':
-      return { label: 'Starting', color: 'var(--muted-2)', dot: 'var(--muted-5)' };
+      return { label: 'Starting', color: 'var(--muted-2)' };
   }
+}
+
+/**
+ * The dot asks for attention rather than restating the outcome: red for failures, green for a
+ * finished run the user has not opened yet, grey once seen. Working tasks render a pulsing dot.
+ */
+export function dotColor(task: Pick<TaskSummary, 'state' | 'unread'>): string {
+  if (task.state === 'failed') return 'var(--red)';
+  if (task.unread) return 'var(--green)';
+  return 'var(--muted-5)';
 }

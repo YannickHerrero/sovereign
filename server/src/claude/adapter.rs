@@ -424,6 +424,7 @@ mod tests {
             pinned: false,
             created_at: 0,
             updated_at: 0,
+            seen_at: 0,
             last_status: None,
             running: false,
             baseline: None,

@@ -23,6 +23,10 @@ pub struct Task {
     pub pinned: bool,
     pub created_at: u64,
     pub updated_at: u64,
+    /// When the user last opened the task; a later `updated_at` means unread. Tasks created before
+    /// the field existed start unread.
+    #[serde(default)]
+    pub seen_at: u64,
     /// Outcome of the most recent run; None until the first run settles.
     pub last_status: Option<RunStatus>,
     /// True while an agent turn is in flight. Still set after a restart means the run was killed

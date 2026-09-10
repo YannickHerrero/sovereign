@@ -89,6 +89,7 @@ pub async fn create(
         pinned: false,
         created_at: now,
         updated_at: now,
+        seen_at: now,
         last_status: None,
         running: false,
         baseline: None,
@@ -258,6 +259,8 @@ pub async fn abort(State(state): State<SharedState>, Path(id): Path<String>) -> 
 pub struct Patch {
     pinned: Option<bool>,
     title: Option<String>,
+    /// `true` marks the task as seen by the user; other values are ignored.
+    seen: Option<bool>,
 }
 
 pub async fn patch(
@@ -274,6 +277,9 @@ pub async fn patch(
             }
             if let Some(title) = &title {
                 t.title = title.clone();
+            }
+            if body.seen == Some(true) {
+                t.seen_at = now_ms();
             }
         })
         .map_err(|e| ApiError::internal(e.to_string()))?
