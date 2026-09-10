@@ -16,6 +16,24 @@ pub struct Config {
     pub repos_root: PathBuf,
     pub pi_bin: String,
     pub idle_kill_secs: u64,
+    #[serde(default)]
+    pub claude: ClaudeConfig,
+}
+
+/// Claude Code has no way to list models, so the offer is declared here.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaudeConfig {
+    pub bin: String,
+    pub models: Vec<String>,
+}
+
+impl Default for ClaudeConfig {
+    fn default() -> Self {
+        Self {
+            bin: "claude".into(),
+            models: ["fable", "opus", "sonnet", "haiku", "claude-fable-5-1[1m]"].map(String::from).to_vec(),
+        }
+    }
 }
 
 impl Default for Config {
@@ -27,6 +45,7 @@ impl Default for Config {
             repos_root: home().join("dev"),
             pi_bin: "pi".into(),
             idle_kill_secs: 600,
+            claude: ClaudeConfig::default(),
         }
     }
 }
