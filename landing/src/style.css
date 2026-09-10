@@ -146,16 +146,43 @@ a {
 .brand-dot {
   color: #b8caba;
 }
-.header nav {
+.primary-nav {
   display: flex;
   gap: 30px;
   font-size: 13px;
 }
-.header nav a {
+.primary-nav a {
   opacity: 0.85;
 }
-.header nav a:hover {
+.primary-nav a:hover {
   opacity: 1;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.language-switch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+}
+.language-switch a {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  min-height: 36px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+}
+.language-switch a[aria-current="page"] {
+  background: #ffffff18;
+  border-color: #ffffff60;
+  font-weight: 700;
+}
+.language-switch a:hover {
+  background: #ffffff25;
 }
 .nav-cta {
   font-size: 13px;
@@ -818,18 +845,26 @@ details[open] summary::after {
     flex-wrap: wrap;
   }
   .header .brand {
-    font-size: 25px;
+    font-size: 23px;
   }
   .brand svg {
-    width: 25px;
-    height: 25px;
+    width: 23px;
+    height: 23px;
+    margin-right: 6px;
   }
-  .header nav {
+  .primary-nav {
     display: none;
   }
+  .header-actions {
+    gap: 8px;
+  }
+  .language-switch a {
+    min-width: 27px;
+    font-size: 10px;
+  }
   .nav-cta {
-    font-size: 11px;
-    padding: 10px 12px;
+    font-size: 10px;
+    padding: 10px 8px;
   }
   .nav-cta span {
     margin-left: 6px;

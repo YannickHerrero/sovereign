@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sovereign-landing-chi.vercel.app/sitemap.xml
