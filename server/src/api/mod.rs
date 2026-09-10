@@ -12,7 +12,7 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::config::Config;
 use crate::repos;
-use crate::pi::manager::Agents;
+use crate::agent::manager::Agents;
 use crate::store::Store;
 
 mod models;

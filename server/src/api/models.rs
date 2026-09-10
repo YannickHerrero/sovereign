@@ -3,7 +3,7 @@ use axum::Json;
 use serde::Deserialize;
 
 use super::{ApiError, SharedState};
-use crate::pi::models::{self, ModelList};
+use crate::agent::{AgentKind, ModelList};
 use crate::repos;
 
 #[derive(Deserialize)]
@@ -17,7 +17,8 @@ pub async fn list(
 ) -> Result<Json<ModelList>, ApiError> {
     let repo = repos::find(&state.config.repos_root, &query.repo)
         .ok_or_else(|| ApiError::bad_request("unknown repo"))?;
-    models::discover(&state.config.pi_bin, &repo.path).await
+    let backend = state.agents.backend(AgentKind::Pi).map_err(|e| ApiError::internal(e.to_string()))?;
+    backend.discover_models(&repo.path).await
         .map(Json)
         .map_err(|e| ApiError::internal(format!("listing pi models: {e}")))
 }

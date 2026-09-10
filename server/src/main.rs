@@ -1,3 +1,4 @@
+mod agent;
 mod api;
 mod assets;
 mod config;
@@ -14,7 +15,8 @@ use anyhow::Result;
 use tracing_subscriber::EnvFilter;
 
 use crate::config::Config;
-use crate::pi::manager::Agents;
+use crate::agent::manager::Agents;
+use crate::pi::adapter::PiBackend;
 use crate::store::Store;
 
 #[tokio::main]
@@ -33,7 +35,8 @@ async fn main() -> Result<()> {
         .map(Into::into)
         .unwrap_or_else(Store::default_path);
     let store = Arc::new(Store::open(store_path)?);
-    let agents = Agents::new(config.clone(), store.clone());
+    let pi: Arc<dyn agent::Backend> = Arc::new(PiBackend { bin: config.pi_bin.clone() });
+    let agents = Agents::new(config.clone(), store.clone(), vec![pi]);
     let listen = config.listen.clone();
     let state = Arc::new(api::AppState { config, store, agents, started_at: Instant::now() });
     let listener = tokio::net::TcpListener::bind(&listen).await?;

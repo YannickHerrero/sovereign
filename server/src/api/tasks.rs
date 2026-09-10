@@ -6,8 +6,8 @@ use serde_json::Value;
 
 use super::{ApiError, SharedState};
 use crate::git;
-use crate::pi::{image::{self, ImageContent}, session, session::Turn, title};
-use crate::pi::models::{Model, ModelList, ModelRef};
+use crate::agent::{Model, ModelList, ModelRef, Turn};
+use crate::pi::image::{self, ImageContent};
 use crate::repos;
 use crate::store::{now_ms, Task, TouchedFile};
 use crate::tasks::{provisional_title, TaskSummary};
@@ -33,14 +33,10 @@ pub async fn detail(
     Path(id): Path<String>,
 ) -> Result<Json<TaskDetail>, ApiError> {
     let task = load(&state, &id)?;
-    let session_file = task.session_file.clone();
-    let cwd = task.cwd.clone();
+    let agents = state.agents.clone();
+    let blocking_task = task.clone();
     let (session, branch) = tokio::task::spawn_blocking(move || {
-        let session = match session_file {
-            Some(file) if file.exists() => session::read(&file),
-            _ => Ok(session::Session::default()),
-        };
-        (session, repos::current_branch(&cwd))
+        (agents.transcript(&blocking_task), repos::current_branch(&blocking_task.cwd))
     })
     .await
     .map_err(|e| ApiError::internal(e.to_string()))?;
@@ -77,6 +73,7 @@ pub async fn create(
     let now = now_ms();
     let task = Task {
         id: uuid::Uuid::new_v4().to_string(),
+        agent: Default::default(),
         repo: repo.name,
         cwd: repo.path,
         session_id: uuid::Uuid::new_v4().to_string(),
@@ -104,7 +101,7 @@ pub async fn create(
         return Err(ApiError::internal(format!("starting pi: {err}")));
     }
     if !message.is_empty() {
-        tokio::spawn(generate_title(state.clone(), task.id.clone(), message));
+        tokio::spawn(generate_title(state.clone(), task.id.clone(), task.agent, message));
     }
     let task = state.store.get(&task.id).unwrap_or(task);
     Ok((StatusCode::CREATED, Json(state.agents.summary(&task))))
@@ -156,9 +153,9 @@ pub async fn prompt(
 }
 
 /// Replaces the provisional title with one written by pi, unless the user renamed the task first.
-async fn generate_title(state: SharedState, task_id: String, message: String) {
+async fn generate_title(state: SharedState, task_id: String, agent: crate::agent::AgentKind, message: String) {
     let provisional = provisional_title(&message);
-    let title = match title::generate(&state.config.pi_bin, &message).await {
+    let title = match state.agents.generate_title(agent, &message).await {
         Ok(title) => title,
         Err(err) => {
             tracing::warn!(task_id, "title generation failed: {err}");
