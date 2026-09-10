@@ -1,0 +1,12 @@
+# Root-level CLI deployments publish only the independent landing app.
+/*
+!/landing
+!/landing/**
+/landing/node_modules
+/landing/dist
+/landing/test-results
+/landing/playwright-report
+/landing/.vercel
+/landing/.env*
+/landing/tests
+/landing/playwright.config.js

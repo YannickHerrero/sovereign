@@ -41,6 +41,19 @@ Les quatre PNG sont versionnés : le build de la landing ne lance pas la PWA. Le
 
 ## Déploiement
 
+Production : **https://sovereign-landing-chi.vercel.app**.
+
+Projet Vercel : `sovereign-landing`, dans `yannick-herreros-projects-da137f6e`, relié au dépôt GitHub avec `landing` comme Root Directory et Node.js 24.x. Il est distinct du projet `sovereign` qui héberge la PWA.
+
+Pour republier via la CLI, exécuter **depuis la racine du dépôt**, pas depuis `landing/` :
+
+```sh
+vercel link --yes --project sovereign-landing --scope yannick-herreros-projects-da137f6e
+vercel deploy --prod --yes --scope yannick-herreros-projects-da137f6e
+```
+
+`landing/vercel.json` fixe les commandes et le dossier de sortie. Le `.vercelignore` à la racine limite les envois CLI à la landing, sans les dépendances locales, les builds, les secrets ni les autres apps. Les fichiers `.vercel/` et `.env.local` créés par Vercel restent ignorés par Git.
+
 Déployer `landing/` comme un projet séparé sur un hébergeur statique (Vercel, Netlify, etc.) :
 
 - répertoire racine : `landing`
