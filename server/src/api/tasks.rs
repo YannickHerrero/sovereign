@@ -198,6 +198,29 @@ pub async fn diff(State(state): State<SharedState>, Path(id): Path<String>) -> R
     Ok(Json(DiffResponse { files }))
 }
 
+#[derive(Deserialize)]
+pub struct FileQuery {
+    path: String,
+}
+
+/// Working-tree text of one touched file, used by the diff view to expand context.
+pub async fn file(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+    axum::extract::Query(query): axum::extract::Query<FileQuery>,
+) -> Result<String, ApiError> {
+    let task = load(&state, &id)?;
+    if !task.touched_files.iter().any(|f| f.path == query.path) {
+        return Err(ApiError::not_found("file is not part of this task's changes"));
+    }
+    let cwd = task.cwd;
+    let text = tokio::task::spawn_blocking(move || git::read_text(&cwd, &query.path))
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?
+        .map_err(ApiError::bad_request)?;
+    text.ok_or_else(|| ApiError::not_found("file no longer exists in the working tree"))
+}
+
 pub async fn abort(State(state): State<SharedState>, Path(id): Path<String>) -> Result<StatusCode, ApiError> {
     load(&state, &id)?;
     state.agents.abort(&id).await.map_err(|e| ApiError::bad_request(e.to_string()))?;

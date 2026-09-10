@@ -40,6 +40,7 @@ pub fn router(state: SharedState) -> Router {
         .route("/tasks/{id}/model", post(tasks::set_model))
         .route("/tasks/{id}/abort", post(tasks::abort))
         .route("/tasks/{id}/diff", get(tasks::diff))
+        .route("/tasks/{id}/file", get(tasks::file))
         .route("/tasks/{id}/ui-response", post(tasks::ui_response))
         .route("/ws", get(ws::upgrade))
         .layer(DefaultBodyLimit::max(8 * 1024 * 1024))

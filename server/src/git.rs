@@ -103,6 +103,26 @@ pub fn diffs(repo: &Path, base: Option<&str>, files: &[TouchedFile]) -> Vec<File
         .collect()
 }
 
+const MAX_FILE_BYTES: u64 = 2 * 1024 * 1024;
+
+/// Current text of a working-tree file, for expanding diff context. Rejects binaries and
+/// files over 2 MiB; None when the file no longer exists.
+pub fn read_text(repo: &Path, path: &str) -> Result<Option<String>, String> {
+    let full = repo.join(path);
+    let Ok(meta) = std::fs::metadata(&full) else { return Ok(None) };
+    if !meta.is_file() {
+        return Ok(None);
+    }
+    if meta.len() > MAX_FILE_BYTES {
+        return Err("file is larger than 2 MiB".into());
+    }
+    let bytes = std::fs::read(&full).map_err(|e| e.to_string())?;
+    if bytes.iter().take(8192).any(|b| *b == 0) {
+        return Err("binary file".into());
+    }
+    Ok(Some(String::from_utf8_lossy(&bytes).into_owned()))
+}
+
 fn line_count(repo: &Path, path: &str) -> u32 {
     std::fs::read_to_string(repo.join(path)).map(|s| s.lines().count() as u32).unwrap_or(0)
 }

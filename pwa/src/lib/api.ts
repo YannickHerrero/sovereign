@@ -53,6 +53,18 @@ export const api = {
   tasks: (s: Server) => request<TaskSummary[]>(s, 'GET', '/tasks'),
   task: (s: Server, id: string) => request<TaskDetail>(s, 'GET', `/tasks/${id}`),
   diff: (s: Server, id: string) => request<{ files: FileDiff[] }>(s, 'GET', `/tasks/${id}/diff`),
+  /** Working-tree text of a touched file (plain text, not JSON). */
+  file: async (s: Server, id: string, path: string): Promise<string> => {
+    const res = await fetch(`${s.url}/api/tasks/${id}/file?path=${encodeURIComponent(path)}`, {
+      headers: { Authorization: `Bearer ${s.token}` },
+    });
+    if (!res.ok) throw new ApiError(res.status, (await res.text()) || res.statusText);
+    // An older server without this route falls back to the app shell: never show that as code.
+    if (!(res.headers.get('content-type') ?? '').startsWith('text/plain')) {
+      throw new ApiError(res.status, 'This server does not provide file contents yet');
+    }
+    return res.text();
+  },
   createTask: (s: Server, repo: string, message: string, images: ImageContent[] = [], model?: ModelRef | null) =>
     request<TaskSummary>(s, 'POST', '/tasks', { repo, message, images, ...(model ? { model } : {}) }, 125000),
   prompt: (s: Server, id: string, message: string, images: ImageContent[] = []) =>
