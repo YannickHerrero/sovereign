@@ -80,9 +80,11 @@ impl Backend for ClaudeBackend {
             "Write a short title (at most 6 words, no quotes, no trailing period) describing this \
              coding task request. Reply with the title only.\n\nRequest:\n{message}"
         );
+        // The prompt goes first: `--tools` is variadic and would swallow it.
         let child = Command::new(&self.bin)
             .args([
                 "-p",
+                &prompt,
                 "--output-format",
                 "text",
                 "--model",
@@ -92,7 +94,6 @@ impl Backend for ClaudeBackend {
                 "bypassPermissions",
                 "--tools",
                 "",
-                &prompt,
             ])
             .stdin(Stdio::null())
             .stdout(Stdio::piped())

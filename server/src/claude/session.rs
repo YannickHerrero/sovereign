@@ -1,8 +1,8 @@
 //! Reader for Claude Code session files (`~/.claude/projects/<cwd>/<id>.jsonl`).
 //!
-//! Entries `user` and `assistant` are linked by `uuid` / `parentUuid`; the `last-prompt` entry
-//! names the active leaf. The format is internal to Claude Code, so unknown entries are skipped
-//! and only the fields Sovereign needs are read.
+//! Entries are linked by `uuid` / `parentUuid`; the chain also runs through `attachment` and
+//! `system` entries, so every entry with a uuid is indexed and only `user` / `assistant` ones
+//! become turns. The format is internal to Claude Code: unknown entries and fields are ignored.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -24,7 +24,6 @@ pub fn parse(raw: &str) -> Session {
     let mut session = Session::default();
     let mut by_uuid: HashMap<String, Value> = HashMap::new();
     let mut last_uuid: Option<String> = None;
-    let mut leaf: Option<String> = None;
 
     for line in raw.split('\n') {
         let line = line.trim_end_matches('\r');
@@ -32,28 +31,21 @@ pub fn parse(raw: &str) -> Session {
             continue;
         }
         let Ok(entry) = serde_json::from_str::<Value>(line) else { continue };
-        match entry.get("type").and_then(Value::as_str) {
-            Some("user" | "assistant") => {
-                if entry.get("isSidechain").and_then(Value::as_bool) == Some(true) {
-                    continue;
-                }
-                if session.cwd.is_none() {
-                    session.cwd = entry.get("cwd").and_then(Value::as_str).map(String::from);
-                }
-                if let Some(uuid) = entry.get("uuid").and_then(Value::as_str) {
-                    last_uuid = Some(uuid.to_string());
-                    by_uuid.insert(uuid.to_string(), entry);
-                }
-            }
-            Some("last-prompt") => {
-                leaf = entry.get("leafUuid").and_then(Value::as_str).map(String::from);
-            }
-            _ => {}
+        if entry.get("isSidechain").and_then(Value::as_bool) == Some(true) {
+            continue;
+        }
+        if session.cwd.is_none() {
+            session.cwd = entry.get("cwd").and_then(Value::as_str).map(String::from);
+        }
+        if let Some(uuid) = entry.get("uuid").and_then(Value::as_str) {
+            last_uuid = Some(uuid.to_string());
+            by_uuid.insert(uuid.to_string(), entry);
         }
     }
 
+    // Claude Code appends in order, so the last linked entry is the active leaf.
     let mut branch = Vec::new();
-    let mut cursor = leaf.filter(|id| by_uuid.contains_key(id)).or(last_uuid);
+    let mut cursor = last_uuid;
     while let Some(id) = cursor {
         match by_uuid.remove(&id) {
             Some(entry) => {
@@ -222,7 +214,8 @@ mod tests {
 {"parentUuid":"a1","isSidechain":false,"type":"assistant","message":{"model":"claude-sonnet-5","role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Write","input":{"file_path":"/repo/a.txt","content":"1"}}]},"uuid":"a2","timestamp":"2026-09-09T08:47:01.281Z"}
 {"parentUuid":"a2","isSidechain":false,"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"ok"}]},"uuid":"u2","timestamp":"2026-09-09T08:47:01.296Z","toolUseResult":{}}
 {"parentUuid":"u2","isSidechain":true,"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"subagent noise"}]},"uuid":"side","timestamp":"2026-09-09T08:47:02.000Z"}
-{"parentUuid":"u2","isSidechain":false,"type":"assistant","message":{"model":"claude-sonnet-5","role":"assistant","content":[{"type":"text","text":"done"}]},"uuid":"a3","timestamp":"2026-09-09T08:47:03.000Z"}
+{"parentUuid":"u2","isSidechain":false,"type":"attachment","attachment":{"type":"x"},"uuid":"att1","timestamp":"2026-09-09T08:47:02.500Z"}
+{"parentUuid":"att1","isSidechain":false,"type":"assistant","message":{"model":"claude-sonnet-5","role":"assistant","content":[{"type":"text","text":"done"}]},"uuid":"a3","timestamp":"2026-09-09T08:47:03.000Z"}
 {"parentUuid":"a3","isSidechain":false,"type":"user","message":{"role":"user","content":[{"type":"text","text":"again"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"AAAA"}}]},"uuid":"u3","timestamp":"2026-09-09T08:48:00.000Z"}
 {"parentUuid":"u3","isSidechain":false,"type":"assistant","message":{"model":"claude-sonnet-5","role":"assistant","content":[{"type":"text","text":"partial"}]},"uuid":"a4","timestamp":"2026-09-09T08:48:01.000Z"}
 {"parentUuid":"a4","isSidechain":false,"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]},"uuid":"u4","timestamp":"2026-09-09T08:48:02.000Z"}
