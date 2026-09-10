@@ -47,12 +47,18 @@
     {#each groups as g (g.key)}
       {@const collapsed = byRepo && prefs.isCollapsed(store.server.id, g.label)}
       {#if byRepo}
-        <button class="group group--repo" aria-expanded={!collapsed} onclick={() => prefs.toggleCollapsed(store.server.id, g.label)}>
-          <span class="caret" class:closed={collapsed}><Icon name="chevron" color="var(--muted-3)" /></span>
-          <span class="repo-name">{g.label}</span>
-          {#if g.running > 0}<span class="dot dot--pulse" style:width="6px" style:height="6px"></span>{/if}
+        <div class="group group--repo">
+          <button class="repo-toggle" aria-expanded={!collapsed} onclick={() => prefs.toggleCollapsed(store.server.id, g.label)}>
+            <span class="caret" class:closed={collapsed}><Icon name="chevron" color="var(--muted-3)" /></span>
+            <span class="repo-name">{g.label}</span>
+            {#if g.running > 0}<span class="dot dot--pulse" style:width="6px" style:height="6px"></span>{/if}
+          </button>
+          <button class="repo-new" title="New task in {g.label}" aria-label="New task in {g.label}"
+            onclick={() => { store.proposedRepo = g.label; router.go({ name: 'tasks', wsId: store.server.id }); }}>
+            <Icon name="plus" color="var(--ink-control)" />
+          </button>
           <span class="count">{g.items.length}</span>
-        </button>
+        </div>
       {:else}
         <div class="group">{g.label}</div>
       {/if}
@@ -166,6 +172,32 @@
     gap: 7px;
     width: 100%;
     text-align: left;
+    padding-right: 14px;
+  }
+  .repo-toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    flex: 1;
+    text-align: left;
+  }
+  .repo-new {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.12s ease, background 0.12s ease;
+  }
+  .group--repo:hover .repo-new,
+  .repo-new:focus-visible {
+    opacity: 1;
+  }
+  .repo-new:hover {
+    background: var(--press);
   }
   .caret {
     display: flex;
@@ -180,7 +212,6 @@
     font-size: 12px;
   }
   .count {
-    margin-left: auto;
     font-size: 11px;
     color: var(--muted-3);
   }

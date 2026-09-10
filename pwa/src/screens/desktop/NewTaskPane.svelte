@@ -10,6 +10,15 @@
 
   let repos = $state<Repo[]>([]);
   let repo = $state('');
+
+  $effect(() => {
+    const proposed = store.proposedRepo;
+    if (proposed) {
+      repo = proposed;
+      selectedModel = null;
+      store.proposedRepo = null;
+    }
+  });
   let selectedModel = $state<PiModel | null>(null);
   let error = $state<string | null>(null);
 

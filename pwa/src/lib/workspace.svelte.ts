@@ -47,6 +47,10 @@ export class WorkspaceStore {
     return this.firstPrompts.get(taskId);
   }
 
+  /** Repo the "new task" pane should preselect, set by a project section's "+". Reactive so an
+   *  already mounted pane picks it up. */
+  proposedRepo = $state<string | null>(null);
+
   async refresh() {
     try {
       this.tasks = await api.tasks(this.server);
