@@ -118,6 +118,9 @@ export class ChatSession {
         this.turns.push(event.turn);
         void this.refreshStats();
         break;
+      case 'note':
+        this.turns.push({ role: 'system', text: event.text, at: event.at });
+        break;
       case 'error':
         this.error = event.message;
         break;

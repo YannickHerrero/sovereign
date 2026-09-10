@@ -32,6 +32,8 @@
           {/each}
           {turn.text}
         </div>
+      {:else if turn.role === 'system'}
+        <div class="system">{turn.text}</div>
       {:else}
         <div class="agent">
           <div class="meta">{session.metaLabel(turn)}</div>
@@ -136,6 +138,16 @@
     border-radius: 16px;
     font-size: 14px;
     animation-duration: 0.2s;
+  }
+  .system {
+    align-self: center;
+    max-width: 80%;
+    text-align: center;
+    font-size: 12.5px;
+    color: #a19e96;
+  }
+  .desktop .system {
+    font-size: 12px;
   }
   .agent {
     min-width: 0;

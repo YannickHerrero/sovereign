@@ -34,6 +34,7 @@ pub enum RunEvent {
     TextDelta { delta: String },
     FileTouched { path: String },
     Settled { turn: Turn },
+    Note { text: String, at: u64 },
     Error { message: String },
     UiRequest { request: Value },
     ModelChanged { model: Model },
@@ -334,6 +335,7 @@ impl Agents {
                 }
             }
             RunSignal::Status(text) => self.emit(task_id, RunEvent::Status { text }),
+            RunSignal::Note(text) => self.emit(task_id, RunEvent::Note { text, at: crate::store::now_ms() }),
             RunSignal::TextDelta(delta) => self.emit(task_id, RunEvent::TextDelta { delta }),
             RunSignal::FileTouched(path) => {
                 let mut runs = self.runs.lock().unwrap();

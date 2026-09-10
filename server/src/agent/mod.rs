@@ -49,6 +49,12 @@ pub enum Turn {
         at: u64,
         status: RunStatus,
     },
+    /// Something the harness injected into the conversation (a background command finishing,
+    /// a reminder), shown as a discreet event rather than as the user's words.
+    System {
+        text: String,
+        at: u64,
+    },
 }
 
 /// A transcript read from a backend's session file.
@@ -98,6 +104,8 @@ pub enum RunSignal {
     FileTouched(String),
     /// One complete assistant message of the run.
     AssistantMessage { text: String, at: u64, status: RunStatus, error: Option<String> },
+    /// A harness-injected message worth a discreet line in the thread.
+    Note(String),
     /// The run is over, including retries and queued follow-ups.
     Settled,
     /// The agent needs an answer from the user; payload is backend-specific and echoed back.
