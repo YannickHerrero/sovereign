@@ -60,12 +60,17 @@ pub struct Session {
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct ModelRef {
+    /// Which agent serves the model; absent in older clients, which only knew pi.
+    #[serde(default)]
+    pub agent: AgentKind,
     pub provider: String,
     pub id: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Model {
+    #[serde(default)]
+    pub agent: AgentKind,
     pub provider: String,
     pub id: String,
     pub name: String,
@@ -118,6 +123,8 @@ pub trait AgentProcess: Send + Sync {
 #[async_trait]
 pub trait Backend: Send + Sync {
     fn kind(&self) -> AgentKind;
+    /// Checks that the agent's binary runs on this machine.
+    async fn probe(&self) -> Result<()>;
     /// Starts (or resumes) the agent for `task`; signals flow until the process exits.
     async fn spawn(&self, task: &Task, signals: mpsc::Sender<RunSignal>) -> Result<Arc<dyn AgentProcess>>;
     fn read_transcript(&self, path: &Path) -> Result<Session>;

@@ -15,6 +15,7 @@ use super::process::PiProcess;
 use super::session;
 use super::title;
 use crate::agent::{AgentKind, AgentProcess, Backend, Model, ModelList, ModelRef, RunSignal, RunStatus, Session};
+use anyhow::{bail, Context};
 use crate::store::Task;
 
 pub struct PiBackend {
@@ -25,6 +26,18 @@ pub struct PiBackend {
 impl Backend for PiBackend {
     fn kind(&self) -> AgentKind {
         AgentKind::Pi
+    }
+
+    async fn probe(&self) -> Result<()> {
+        let output = tokio::process::Command::new(&self.bin)
+            .arg("--version")
+            .output()
+            .await
+            .with_context(|| format!("running {} --version", self.bin))?;
+        if !output.status.success() {
+            bail!("{} --version exited with {}", self.bin, output.status);
+        }
+        Ok(())
     }
 
     async fn spawn(&self, task: &Task, signals: mpsc::Sender<RunSignal>) -> Result<Arc<dyn AgentProcess>> {
@@ -45,7 +58,7 @@ impl Backend for PiBackend {
     }
 
     async fn discover_models(&self, cwd: &Path) -> Result<ModelList> {
-        models::discover(&self.bin, cwd).await
+        models::discover(&self.bin, cwd).await.map(tag)
     }
 
     async fn generate_title(&self, message: &str) -> Result<String> {
@@ -80,11 +93,14 @@ impl AgentProcess for PiAgent {
     }
 
     async fn list_models(&self) -> Result<ModelList> {
-        models::list(&self.process).await
+        models::list(&self.process).await.map(tag)
     }
 
     async fn set_model(&self, model: &ModelRef) -> Result<Model> {
-        models::set(&self.process, model).await
+        models::set(&self.process, model).await.map(|mut m| {
+            m.agent = AgentKind::Pi;
+            m
+        })
     }
 
     async fn set_name(&self, name: &str) -> Result<()> {
@@ -105,6 +121,17 @@ impl AgentProcess for PiAgent {
     async fn kill(&self) {
         self.process.kill().await;
     }
+}
+
+/// pi's registry knows nothing about Sovereign agents: stamp its models as pi's.
+fn tag(mut list: ModelList) -> ModelList {
+    for model in &mut list.models {
+        model.agent = AgentKind::Pi;
+    }
+    if let Some(current) = &mut list.current {
+        current.agent = AgentKind::Pi;
+    }
+    list
 }
 
 /// Maps raw pi RPC events onto run signals until pi's stdout closes.

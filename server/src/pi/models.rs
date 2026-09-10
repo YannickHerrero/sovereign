@@ -60,9 +60,9 @@ mod tests {
 
         let (tx, _rx) = mpsc::channel(16);
         let process = PiProcess::spawn(bin, &dir, &[], tx).await.unwrap();
-        let selected = set(&process, &ModelRef { provider: "test".into(), id: "vision".into() }).await.unwrap();
+        let selected = set(&process, &ModelRef { agent: Default::default(), provider: "test".into(), id: "vision".into() }).await.unwrap();
         assert_eq!(selected.id, "vision");
-        let error = set(&process, &ModelRef { provider: "missing".into(), id: "vision".into() }).await.unwrap_err();
+        let error = set(&process, &ModelRef { agent: Default::default(), provider: "missing".into(), id: "vision".into() }).await.unwrap_err();
         assert!(error.to_string().contains("Model not found"));
         process.kill().await;
 
@@ -78,7 +78,7 @@ mod tests {
         let backend: std::sync::Arc<dyn crate::agent::Backend> = std::sync::Arc::new(crate::pi::adapter::PiBackend { bin: bin.into() });
         let agents = crate::agent::manager::Agents::new(config, store, vec![backend]);
         let mut events = agents.subscribe();
-        let choice = ModelRef { provider: "test".into(), id: "vision".into() };
+        let choice = ModelRef { agent: Default::default(), provider: "test".into(), id: "vision".into() };
         agents.set_model(&task, &choice).await.unwrap();
         assert!(matches!(events.recv().await.unwrap(),
             crate::agent::manager::ServerEvent::RunEvent {

@@ -75,10 +75,12 @@ pub async fn create(
     let repo = repos::find(&state.config.repos_root, &body.repo)
         .ok_or_else(|| ApiError::bad_request("unknown repo"))?;
     let now = now_ms();
-    state.agents.backend(body.agent).map_err(|e| ApiError::bad_request(e.to_string()))?;
+    // The chosen model decides the agent; `agent` alone is enough when no model is picked.
+    let agent = body.model.as_ref().map(|m| m.agent).unwrap_or(body.agent);
+    state.agents.backend(agent).map_err(|e| ApiError::bad_request(e.to_string()))?;
     let task = Task {
         id: uuid::Uuid::new_v4().to_string(),
-        agent: body.agent,
+        agent,
         repo: repo.name,
         cwd: repo.path,
         session_id: uuid::Uuid::new_v4().to_string(),

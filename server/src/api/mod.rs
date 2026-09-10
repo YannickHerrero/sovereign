@@ -76,6 +76,8 @@ struct Workspace {
     version: &'static str,
     uptime_secs: u64,
     agents_running: usize,
+    /// Coding agents whose binaries answered on this machine.
+    agents: Vec<crate::agent::AgentKind>,
 }
 
 async fn workspace(State(state): State<SharedState>) -> Json<Workspace> {
@@ -84,6 +86,7 @@ async fn workspace(State(state): State<SharedState>) -> Json<Workspace> {
         version: env!("CARGO_PKG_VERSION"),
         uptime_secs: state.started_at.elapsed().as_secs(),
         agents_running: state.agents.working_count(),
+        agents: state.agents.kinds(),
     })
 }
 

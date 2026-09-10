@@ -80,6 +80,35 @@ impl Agents {
         agents
     }
 
+    pub fn kinds(&self) -> Vec<AgentKind> {
+        let mut kinds: Vec<AgentKind> = self.backends.keys().copied().collect();
+        kinds.sort_by_key(|k| *k as u8);
+        kinds
+    }
+
+    /// Models offered by every configured backend, for a task that does not exist yet.
+    /// `current` is the default agent's current model.
+    pub async fn discover_models(&self, cwd: &std::path::Path) -> Result<ModelList> {
+        let mut models = Vec::new();
+        let mut current = None;
+        let mut failures = Vec::new();
+        for kind in self.kinds() {
+            match self.backends[&kind].discover_models(cwd).await {
+                Ok(list) => {
+                    if kind == AgentKind::default() {
+                        current = list.current;
+                    }
+                    models.extend(list.models);
+                }
+                Err(err) => failures.push(format!("{kind:?}: {err}")),
+            }
+        }
+        if models.is_empty() && !failures.is_empty() {
+            return Err(anyhow!(failures.join("; ")));
+        }
+        Ok(ModelList { models, current })
+    }
+
     pub fn backend(&self, kind: AgentKind) -> Result<Arc<dyn Backend>> {
         self.backends.get(&kind).cloned().ok_or_else(|| anyhow!("agent {kind:?} is not configured on this machine"))
     }

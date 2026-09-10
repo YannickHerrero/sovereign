@@ -37,10 +37,19 @@ async fn main() -> Result<()> {
         .map(Into::into)
         .unwrap_or_else(Store::default_path);
     let store = Arc::new(Store::open(store_path)?);
-    let pi: Arc<dyn agent::Backend> = Arc::new(PiBackend { bin: config.pi_bin.clone() });
-    let claude: Arc<dyn agent::Backend> =
-        Arc::new(ClaudeBackend { bin: config.claude.bin.clone(), models: config.claude.models.clone() });
-    let agents = Agents::new(config.clone(), store.clone(), vec![pi, claude]);
+    let candidates: Vec<Arc<dyn agent::Backend>> = vec![
+        Arc::new(PiBackend { bin: config.pi_bin.clone() }),
+        Arc::new(ClaudeBackend { bin: config.claude.bin.clone(), models: config.claude.models.clone() }),
+    ];
+    let mut backends = Vec::new();
+    for backend in candidates {
+        match backend.probe().await {
+            Ok(()) => backends.push(backend),
+            Err(err) => tracing::warn!("agent {:?} unavailable: {err:#}", backend.kind()),
+        }
+    }
+    anyhow::ensure!(!backends.is_empty(), "no coding agent found: install pi or Claude Code");
+    let agents = Agents::new(config.clone(), store.clone(), backends);
     let listen = config.listen.clone();
     let state = Arc::new(api::AppState { config, store, agents, started_at: Instant::now() });
     let listener = tokio::net::TcpListener::bind(&listen).await?;

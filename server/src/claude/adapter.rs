@@ -45,6 +45,18 @@ impl Backend for ClaudeBackend {
         AgentKind::Claude
     }
 
+    async fn probe(&self) -> Result<()> {
+        let output = Command::new(&self.bin)
+            .arg("--version")
+            .output()
+            .await
+            .with_context(|| format!("running {} --version", self.bin))?;
+        if !output.status.success() {
+            bail!("{} --version exited with {}", self.bin, output.status);
+        }
+        Ok(())
+    }
+
     async fn spawn(&self, task: &Task, signals: mpsc::Sender<RunSignal>) -> Result<Arc<dyn AgentProcess>> {
         let resumable = session_path(&task.cwd, &task.session_id).exists();
         let mut args = if resumable {
@@ -220,7 +232,13 @@ fn describe(id: &str) -> Model {
         other => other,
     };
     let name = if id.ends_with("[1m]") { format!("{name} · 1M context") } else { name.to_string() };
-    Model { provider: PROVIDER.into(), id: id.to_string(), name, input: vec!["text".into(), "image".into()] }
+    Model {
+        agent: AgentKind::Claude,
+        provider: PROVIDER.into(),
+        id: id.to_string(),
+        name,
+        input: vec!["text".into(), "image".into()],
+    }
 }
 
 /// `init` reports full ids (claude-sonnet-5) while the offer may use aliases (sonnet).
@@ -433,9 +451,15 @@ mod tests {
         assert!(!agent.is_streaming().await.unwrap());
         assert_eq!(agent.list_models().await.unwrap().current.unwrap().id, "sonnet");
 
-        let chosen = agent.set_model(&ModelRef { provider: PROVIDER.into(), id: "haiku".into() }).await.unwrap();
+        let chosen = agent
+            .set_model(&ModelRef { agent: AgentKind::Claude, provider: PROVIDER.into(), id: "haiku".into() })
+            .await
+            .unwrap();
         assert_eq!(chosen.id, "haiku");
-        assert!(agent.set_model(&ModelRef { provider: "openai".into(), id: "x".into() }).await.is_err());
+        assert!(agent
+            .set_model(&ModelRef { agent: AgentKind::Claude, provider: "openai".into(), id: "x".into() })
+            .await
+            .is_err());
         agent.abort().await.unwrap();
         agent.kill().await;
         std::fs::remove_dir_all(dir).unwrap();
