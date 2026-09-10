@@ -19,6 +19,26 @@ pnpm exec playwright install chromium  # une seule fois
 pnpm test:browser           # Chromium desktop + viewport mobile
 ```
 
+## Régénérer les captures de la PWA
+
+Depuis la racine du dépôt :
+
+```sh
+cd pwa
+pnpm install
+pnpm exec playwright install chromium  # une seule fois
+pnpm screenshots:landing
+```
+
+Cette commande démarre la vraie PWA via Vite sur `127.0.0.1:4175`, puis Playwright ouvre ses routes normales. Les réponses HTTP et la connexion WebSocket sont interceptées ; seules les données et les machines sont fictives. Aucun serveur Rust, agent, secret ni modification des composants de production n’est nécessaire.
+
+- `pwa/tests/landing/mock.ts` : machines, tâches, conversation et patches typés selon l’API de la PWA.
+- `pwa/tests/landing/capture.spec.ts` : navigation réelle, vérifications du chargement et captures PNG dans `landing/public/screenshots/`.
+- Conversation desktop : 1440 × 760 ; conversation mobile : 390 × 780 ; machines : 390 × 480 ; panneau diff desktop : 836 × 760, capturé directement depuis son élément DOM.
+- Date, fuseau horaire et viewport fixés, animations désactivées pour la capture. Le rendu des polices système peut varier selon l’OS ; régénérer sous le même environnement Chromium pour un rendu identique.
+
+Les quatre PNG sont versionnés : le build de la landing ne lance pas la PWA. Le hero utilise la capture mobile sur petit écran ; les captures des fonctionnalités s’ouvrent en taille réelle dans un nouvel onglet. Régénérer puis committer les images après une évolution de l’interface.
+
 ## Déploiement
 
 Déployer `landing/` comme un projet séparé sur un hébergeur statique (Vercel, Netlify, etc.) :
@@ -32,7 +52,7 @@ Aucune variable d’environnement, aucun backend, aucun compte utilisateur ni ou
 
 ## Contenu et visuels
 
-- `index.html` : texte français, métadonnées, liens vers le dépôt et exemples produit. Les aperçus sont des illustrations avec des données fictives, pas une console connectée.
+- `index.html` : texte français, métadonnées, liens vers le dépôt et exemples produit. Les aperçus sont de vraies captures de la PWA avec des données fictives, pas une console connectée.
 - `src/style.css` : mise en page responsive et styles.
 - `src/main.js` : onglets accessibles au clavier (flèches, Début, Fin) et copie des commandes avec message de repli.
 - `public/landscape.svg` et `public/favicon.svg` : illustrations originales. La direction visuelle s’inspire de Multica (paysage immersif, typographie serif, aperçu produit), sans reprendre ses images ni son identité.

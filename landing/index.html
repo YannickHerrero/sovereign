@@ -72,101 +72,28 @@
               Code</strong
             >
           </div>
-          <div
-            class="product-preview"
-            aria-label="Illustration de la console Sovereign avec des données de démonstration"
-          >
-            <div class="preview-top">
-              <span class="window-dots" aria-hidden="true">● ● ●</span
-              ><span>Votre espace de travail</span
-              ><span class="demo-label">APERÇU</span>
-            </div>
-            <div class="preview-body">
-              <aside class="preview-sidebar">
-                <div class="mini-brand">◈ &nbsp; sovereign</div>
-                <div class="workspace-label">WORKSPACES <span>+</span></div>
-                <div class="machine">
-                  <span class="status-dot"></span> MacBook Pro
-                  <span class="muted">⌄</span>
-                </div>
-                <div class="repo-name">⌑ &nbsp; storefront</div>
-                <div class="task selected">
-                  <span class="status-dot"></span>
-                  <div>Ajouter le mode sombre<small>pi · en cours</small></div>
-                </div>
-                <div class="task">
-                  <span class="done">✓</span>
-                  <div>
-                    Corriger la navigation<small>Claude Code · terminé</small>
-                  </div>
-                </div>
-                <div class="machine second-machine">
-                  <span class="status-dot"></span> Serveur maison
-                </div>
-                <div class="repo-name">⌑ &nbsp; api-backend</div>
-                <div class="task">
-                  <span class="done">✓</span>
-                  <div>Tests de l’API<small>pi · terminé</small></div>
-                </div>
-                <div class="sidebar-bottom">
-                  ⚙ &nbsp; Settings <span>⌘ K</span>
-                </div>
-              </aside>
-              <div class="preview-conversation">
-                <div class="conversation-header">
-                  <span
-                    >storefront <span class="muted">/</span> Ajouter le mode
-                    sombre</span
-                  ><span class="muted">•••</span>
-                </div>
-                <div class="conversation-content">
-                  <div class="user-message">
-                    Ajoute un mode sombre qui suit les préférences système, avec
-                    un bouton pour changer de thème.
-                  </div>
-                  <div class="agent-name">
-                    <span class="agent-icon">π</span> pi
-                    <span class="muted">· à l’instant</span>
-                  </div>
-                  <p>
-                    Je vais ajouter les variables de thème et un sélecteur, en
-                    conservant le choix de l’utilisateur.
-                  </p>
-                  <div class="tool-line">
-                    <span class="done">✓</span><code>Read</code
-                    ><span>src/styles.css</span
-                    ><span class="tool-time">0.2s</span>
-                  </div>
-                  <div class="tool-line">
-                    <span class="done">✓</span><code>Edit</code
-                    ><span>src/lib/ThemeToggle.svelte</span
-                    ><span class="diff-count">+42 −3</span>
-                  </div>
-                  <div class="code-preview">
-                    <span>+ <b>:root[data-theme="dark"]</b> {</span
-                    ><span>+ &nbsp; --background: #161819;</span
-                    ><span>+ &nbsp; --foreground: #f4f3ee;</span
-                    ><span>+ }</span>
-                  </div>
-                  <div class="working">
-                    <span class="status-dot"></span> L’agent travaille
-                    <span>· 3 fichiers modifiés</span>
-                  </div>
-                  <div class="mock-composer">
-                    <span>Précisez votre idée…</span>
-                    <div>
-                      <span
-                        >+ &nbsp;
-                        <span class="model-label"
-                          >pi · modèle sélectionné ⌄</span
-                        ></span
-                      ><span class="send-icon">↑</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <figure class="product-preview">
+            <figcaption class="preview-top">
+              <span class="window-dots" aria-hidden="true">● ● ●</span>
+              <span>La vraie interface · données de démonstration</span>
+              <span class="demo-label">CAPTURE PWA</span>
+            </figcaption>
+            <picture>
+              <source
+                media="(max-width: 700px)"
+                srcset="/screenshots/mobile-conversation.png"
+                width="390"
+                height="780"
+              />
+              <img
+                src="/screenshots/desktop-conversation.png"
+                width="1440"
+                height="760"
+                fetchpriority="high"
+                alt="Sovereign : conversation avec pi sur le mode sombre, fichiers modifiés, tâches par projet et machines connectées. Capture de la PWA avec des données fictives."
+              />
+            </picture>
+          </figure>
         </section>
       </div>
       <div class="foundation">
@@ -250,34 +177,23 @@
           <div class="feature-art phone-art">
             <span class="orbit orbit-one"></span
             ><span class="orbit orbit-two"></span>
-            <div class="floating-tag">
-              <span class="status-dot"></span> Connecté à votre machine
-            </div>
-            <div class="phone">
-              <div class="phone-status">9:41 <span>▮▮▮ ▰</span></div>
-              <div class="phone-title">
-                ‹ &nbsp; storefront <span>•••</span>
-              </div>
-              <div class="phone-user">
-                Peux-tu ajouter des tests pour le nouveau thème ?
-              </div>
-              <div class="agent-name"><span class="agent-icon">π</span> pi</div>
-              <p>
-                Les tests sont ajoutés. Les deux thèmes et la persistance du
-                choix sont couverts.
-              </p>
-              <div class="phone-tool">
-                <span class="done">✓</span> Tests exécutés
-                <strong>8 / 8</strong>
-              </div>
-              <div class="phone-diff">
-                3 fichiers modifiés <span>+86 −2</span>
-              </div>
-              <div class="phone-input">Une autre idée ? <span>↑</span></div>
-              <div class="phone-home"></div>
-            </div>
+            <a
+              class="screenshot-link phone"
+              href="/screenshots/mobile-conversation.png"
+              target="_blank"
+              rel="noopener"
+              aria-label="Agrandir la capture de la conversation mobile (nouvel onglet)"
+            >
+              <img
+                src="/screenshots/mobile-conversation.png"
+                width="390"
+                height="780"
+                loading="lazy"
+                alt="La vraie conversation mobile : réponse de pi, fichiers modifiés et bouton View diff. Données fictives."
+              />
+            </a>
             <span class="art-caption"
-              >Votre bureau tient dans votre poche.</span
+              >Capture PWA · données fictives · cliquer pour agrandir ↗</span
             >
           </div>
         </div>
@@ -306,22 +222,24 @@
             >
           </div>
           <div class="feature-art machines-art">
-            <div class="machine-card">
-              <span class="machine-glyph">▱</span>
-              <div>MacBook Pro<small>storefront · design-system</small></div>
-              <span class="online">Connecté</span>
-            </div>
-            <div class="machine-card">
-              <span class="machine-glyph">▤</span>
-              <div>Serveur maison<small>api-backend · automations</small></div>
-              <span class="online">Connecté</span>
-            </div>
-            <div class="machine-card">
-              <span class="machine-glyph">▣</span>
-              <div>Station de travail<small>Recherche · prototypes</small></div>
-              <span class="offline">Hors ligne</span>
-            </div>
-            <span class="art-caption">Votre infrastructure, réunie.</span>
+            <a
+              class="screenshot-link workspace-screenshot"
+              href="/screenshots/mobile-workspaces.png"
+              target="_blank"
+              rel="noopener"
+              aria-label="Agrandir la capture des machines (nouvel onglet)"
+            >
+              <img
+                src="/screenshots/mobile-workspaces.png"
+                width="390"
+                height="480"
+                loading="lazy"
+                alt="L’écran Workspaces de Sovereign avec deux machines en ligne, leurs agents actifs et une station hors ligne. Données fictives."
+              />
+            </a>
+            <span class="art-caption"
+              >Capture PWA · données fictives · cliquer pour agrandir ↗</span
+            >
           </div>
         </div>
         <div
@@ -349,23 +267,23 @@
             >
           </div>
           <div class="feature-art review-art">
-            <div class="review-card">
-              <div class="review-header">
-                ⌑ &nbsp; ThemeToggle.svelte <span>✓ Viewed</span>
-              </div>
-              <pre><code><span class="code-context">  &lt;script&gt;</span>
-<span class="code-add">+   let theme = $state('light');</span>
-<span class="code-add">+   function toggleTheme() {</span>
-<span class="code-add">+     theme = theme === 'light'</span>
-<span class="code-add">+       ? 'dark' : 'light';</span>
-<span class="code-add">+   }</span>
-<span class="code-context">  &lt;/script&gt;</span></code></pre>
-              <div class="review-footer">
-                1 fichier relu sur 3 <span>+42 −3</span>
-              </div>
-            </div>
+            <a
+              class="screenshot-link diff-screenshot"
+              href="/screenshots/desktop-diff.png"
+              target="_blank"
+              rel="noopener"
+              aria-label="Agrandir la capture du diff (nouvel onglet)"
+            >
+              <img
+                src="/screenshots/desktop-diff.png"
+                width="836"
+                height="760"
+                loading="lazy"
+                alt="La vraie vue diff desktop : arborescence, ajouts et suppressions colorés, numéros de ligne et cases Viewed. Données fictives."
+              />
+            </a>
             <span class="art-caption"
-              >Moins de boîte noire. Plus de visibilité.</span
+              >Capture PWA · données fictives · cliquer pour agrandir ↗</span
             >
           </div>
         </div>

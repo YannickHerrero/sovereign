@@ -322,207 +322,29 @@ h1 em {
   font-size: 8px;
   letter-spacing: 1.5px;
 }
-.preview-body {
-  display: grid;
-  grid-template-columns: 225px 1fr;
-  min-height: 410px;
-}
-.preview-sidebar {
-  background: #f0f1eb;
-  border-right: 1px solid #e4e4dd;
-  padding: 21px 13px 14px;
-  display: flex;
-  flex-direction: column;
-  font-size: 11px;
-}
-.mini-brand {
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.6px;
-  margin: 0 8px 30px;
-}
-.workspace-label {
-  font-size: 8px;
-  color: #878b80;
-  letter-spacing: 1px;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 8px;
-  margin-bottom: 17px;
-}
-.machine {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 8px;
-  font-weight: 600;
-}
-.machine .muted {
-  margin-left: auto;
-}
-.repo-name {
-  font-size: 10px;
-  color: #85897e;
-  margin: 12px 8px 8px;
-}
-.task {
-  padding: 10px 9px;
-  display: flex;
-  gap: 9px;
-  align-items: baseline;
-  border-radius: 5px;
-  margin-bottom: 3px;
-  font-size: 10px;
-}
-.task small {
+.product-preview img,
+.screenshot-link img {
   display: block;
-  color: #8a8c84;
-  font-size: 8px;
-  margin-top: 5px;
+  width: 100%;
+  height: auto;
 }
-.task.selected {
-  background: #e2e7dc;
+.screenshot-link {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #d7dfcd;
+  border-radius: 10px;
+  box-shadow: 0 15px 35px #263d2420;
+  transition: transform 0.2s;
 }
-.done {
-  color: #5f8869;
+.screenshot-link:hover {
+  transform: translateY(-3px);
 }
-.second-machine {
-  margin-top: 24px;
+.workspace-screenshot {
+  width: min(100%, 340px);
 }
-.sidebar-bottom {
-  display: flex;
-  justify-content: space-between;
-  margin-top: auto;
-  padding: 25px 8px 0;
-  color: #777c71;
-}
-.sidebar-bottom span {
-  font-size: 9px;
-}
-.conversation-header {
-  height: 48px;
-  border-bottom: 1px solid #e9e9e2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 23px;
-  font-size: 10px;
-}
-.conversation-header .muted {
-  margin-inline: 10px;
-}
-.muted {
-  color: #92948a;
-}
-.conversation-content {
-  max-width: 600px;
-  padding: 23px 28px 17px;
-  margin: auto;
-  font-size: 11px;
-}
-.user-message {
-  background: #eeeee7;
-  padding: 12px 15px;
-  border-radius: 10px 10px 2px 10px;
-  margin: 0 0 23px 68px;
-  line-height: 1.6;
-}
-.agent-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-.agent-name .muted {
-  font-size: 9px;
-  font-weight: 400;
-}
-.agent-icon {
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  background: #e7ecdf;
-  color: #426744;
-  border-radius: 6px;
-  font:
-    17px Georgia,
-    serif;
-}
-.conversation-content > p {
-  line-height: 1.7;
-  margin-bottom: 14px;
-}
-.tool-line {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 9px 0;
-  font-size: 9px;
-  border-top: 1px solid #e9e9e3;
-}
-.tool-line code {
-  font-size: 9px;
-  color: #7a8074;
-}
-.tool-time,
-.diff-count {
-  margin-left: auto;
-  color: #6f9069;
-}
-.code-preview {
-  display: flex;
-  flex-direction: column;
-  padding: 9px 13px;
-  gap: 4px;
-  background: #eaf0e3;
-  font: 9px/1.5 monospace;
-  color: #527c52;
-  border-radius: 4px;
-}
-.code-preview b {
-  font-weight: 400;
-}
-.working {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 9px;
-  margin: 13px 0;
-  color: #6b7d62;
-}
-.working > span:last-child {
-  color: #92978c;
-}
-.mock-composer {
-  border: 1px solid #dddfd3;
-  border-radius: 9px;
-  padding: 13px;
-  color: #999b91;
-  font-size: 11px;
-  box-shadow: 0 2px 5px #21322204;
-}
-.mock-composer > div {
-  margin-top: 15px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 17px;
-}
-.model-label {
-  font-size: 9px;
-  color: #7a8073;
-}
-.send-icon {
-  font-size: 15px;
-  width: 22px;
-  height: 22px;
-  text-align: center;
-  background: #233d34;
-  border-radius: 5px;
-  color: white;
+.diff-screenshot {
+  width: 100%;
 }
 .foundation {
   border-bottom: 1px solid var(--line);
@@ -692,104 +514,16 @@ h2 em {
   height: 530px;
 }
 .phone {
-  position: relative;
-  width: 220px;
-  background: #fafaf6;
+  width: min(100%, 240px);
   border: 5px solid #3c4940;
+  border-radius: 26px;
   box-shadow:
     0 20px 45px #314a3825,
     0 0 0 2px #b7beb0;
-  border-radius: 31px;
-  padding: 14px 13px 8px;
-  transform: rotate(-5deg);
-  font-size: 10px;
+  transform: rotate(-4deg);
 }
-.phone-status {
-  display: flex;
-  justify-content: space-between;
-  font-size: 8px;
-  font-weight: 600;
-  padding: 0 4px 21px;
-}
-.phone-status span {
-  font-size: 7px;
-}
-.phone-title {
-  display: flex;
-  justify-content: space-between;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e8e8df;
-  font-size: 10px;
-}
-.phone-user {
-  padding: 12px;
-  background: #eeeee7;
-  border-radius: 10px;
-  margin: 18px 0 20px 13px;
-  font-size: 9px;
-  line-height: 1.6;
-}
-.phone p {
-  font-size: 9px;
-  line-height: 1.8;
-}
-.phone-tool {
-  margin: 17px 0 12px;
-  border: 1px solid #e1e6d8;
-  border-radius: 5px;
-  padding: 8px;
-  font-size: 8px;
-  display: flex;
-  gap: 5px;
-}
-.phone-tool strong {
-  margin-left: auto;
-  color: #6d895c;
-  font-size: 8px;
-}
-.phone-diff {
-  font-size: 8px;
-  display: flex;
-  justify-content: space-between;
-  color: #7f8577;
-  margin-bottom: 25px;
-}
-.phone-diff span {
-  color: #5a8152;
-}
-.phone-input {
-  border: 1px solid #e0e3d5;
-  border-radius: 12px;
-  padding: 12px 9px;
-  display: flex;
-  justify-content: space-between;
-  color: #9b9e92;
-  font-size: 9px;
-}
-.phone-input span {
-  color: #40643c;
-}
-.phone-home {
-  width: 65px;
-  height: 3px;
-  background: #34463a;
-  border-radius: 9px;
-  margin: 16px auto 0;
-}
-.floating-tag {
-  position: absolute;
-  top: 57px;
-  right: 17px;
-  font-size: 9px;
-  background: #f9faf4;
-  padding: 10px 12px;
-  z-index: 1;
-  border: 1px solid #dae2cf;
-  border-radius: 6px;
-  box-shadow: 0 5px 20px #2541290a;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.phone:hover {
+  transform: rotate(0);
 }
 .art-caption {
   position: absolute;
@@ -800,90 +534,9 @@ h2 em {
   text-align: center;
   padding-inline: 12px;
 }
-.machines-art {
-  flex-direction: column;
-  gap: 15px;
-  padding: 50px 28px;
-}
-.machine-card {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 23px 19px;
-  border: 1px solid #dce2d2;
-  background: #f8f9f2;
-  border-radius: 9px;
-  font-size: 12px;
-  box-shadow: 0 5px 15px #233b2105;
-}
-.machine-card:nth-child(2) {
-  transform: translateX(-8px);
-}
-.machine-glyph {
-  font-size: 27px;
-  color: #6a805e;
-}
-.machine-card small {
-  display: block;
-  font-size: 9px;
-  color: #8b9483;
-  margin-top: 6px;
-}
-.online,
-.offline {
-  margin-left: auto;
-  font-size: 8px;
-  color: #5e7b50;
-  background: #e9f0df;
-  padding: 5px 7px;
-  border-radius: 15px;
-}
-.offline {
-  color: #89907f;
-  background: #eceee6;
-}
+.machines-art,
 .review-art {
-  padding: 45px 25px;
-}
-.review-card {
-  background: #fafbf6;
-  border: 1px solid #d7dfcd;
-  border-radius: 9px;
-  width: 100%;
-  overflow: hidden;
-  box-shadow: 0 15px 30px #263d2410;
-  transform: rotate(-2deg);
-}
-.review-header,
-.review-footer {
-  display: flex;
-  justify-content: space-between;
-  font-size: 9px;
-  padding: 17px 14px;
-}
-.review-header span,
-.review-footer span {
-  color: #6e8b5e;
-}
-.review-card pre {
-  font-size: 11px;
-  line-height: 2;
-  margin: 0;
-  overflow: auto;
-  padding-block: 16px;
-  border-block: 1px solid #e1e6d8;
-}
-.review-card pre span {
-  display: block;
-  padding-inline: 12px;
-}
-.code-add {
-  background: #eaf1e1;
-  color: #588247;
-}
-.code-context {
-  color: #86927b;
+  padding: 35px 25px 55px;
 }
 .ownership {
   background: #eaece3;
@@ -1119,19 +772,11 @@ details[open] summary::after {
   .hero {
     padding-top: 140px;
   }
-  .preview-body {
-    grid-template-columns: 195px 1fr;
-  }
   .feature-copy {
     padding: 30px;
   }
   .feature-copy h3 {
     font-size: 32px;
-  }
-  .floating-tag {
-    top: 36px;
-    right: 9px;
-    font-size: 8px;
   }
   .feature-switcher {
     gap: 15px;
@@ -1159,24 +804,8 @@ details[open] summary::after {
     gap: 40px;
     padding-bottom: 75px;
   }
-  .machine-card {
-    padding: 17px 12px;
-    gap: 8px;
-    font-size: 10px;
-  }
-  .machine-card small {
-    font-size: 8px;
-  }
-  .online,
-  .offline {
-    font-size: 7px;
-    padding: 4px;
-  }
   .machines-art {
     padding-inline: 18px;
-  }
-  .review-card pre {
-    font-size: 9px;
   }
 }
 @media (max-width: 700px) {
@@ -1252,13 +881,6 @@ details[open] summary::after {
   .product-preview {
     border-width: 4px;
   }
-  .preview-sidebar {
-    display: none;
-  }
-  .preview-body {
-    display: block;
-    min-height: 0;
-  }
   .preview-top {
     height: 30px;
     font-size: 8px;
@@ -1269,33 +891,6 @@ details[open] summary::after {
   }
   .demo-label {
     font-size: 7px;
-  }
-  .conversation-header {
-    padding-inline: 15px;
-    height: 40px;
-    font-size: 9px;
-  }
-  .conversation-content {
-    padding: 19px 15px 16px;
-    font-size: 10px;
-  }
-  .user-message {
-    margin-left: 30px;
-    font-size: 10px;
-    margin-bottom: 17px;
-  }
-  .tool-line {
-    font-size: 8px;
-    gap: 6px;
-  }
-  .tool-line code {
-    font-size: 8px;
-  }
-  .code-preview {
-    font-size: 8px;
-  }
-  .mock-composer {
-    font-size: 10px;
   }
   .foundation-inner {
     display: grid;
@@ -1373,11 +968,6 @@ details[open] summary::after {
   }
   .phone-art {
     padding-block: 32px 45px;
-  }
-  .floating-tag {
-    top: 40px;
-    right: 24px;
-    font-size: 9px;
   }
   .ownership-inner {
     grid-template-columns: 1fr;
@@ -1460,22 +1050,8 @@ details[open] summary::after {
     min-height: 350px;
     padding: 40px 23px 60px;
   }
-  .machine-card {
-    font-size: 12px;
-    padding: 20px 13px;
-  }
-  .machine-card small {
-    font-size: 9px;
-  }
-  .online,
-  .offline {
-    font-size: 8px;
-  }
   .review-art {
     min-height: 340px;
-  }
-  .review-card pre {
-    font-size: 10px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

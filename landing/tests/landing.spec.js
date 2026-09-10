@@ -44,6 +44,38 @@ test("renders the product, valid local links and no horizontal overflow", async 
   expect(externalRequests).toEqual([]);
 });
 
+test("loads real PWA captures and selects the right hero image", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const hero = page.locator(".product-preview img");
+  for (const [width, expected] of [
+    [390, "mobile-conversation.png"],
+    [1440, "desktop-conversation.png"],
+  ]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect
+      .poll(() => hero.evaluate((img) => img.currentSrc))
+      .toContain(expected);
+    await expect
+      .poll(() => hero.evaluate((img) => img.complete && img.naturalWidth > 0))
+      .toBe(true);
+  }
+  for (const tab of await page.getByRole("tab").all()) {
+    await tab.click();
+    const image = page.getByRole("tabpanel").locator("img");
+    await image.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => image.evaluate((img) => img.complete && img.naturalWidth > 0))
+      .toBe(true);
+    const link = page
+      .getByRole("tabpanel")
+      .getByRole("link", { name: /Agrandir/ });
+    await expect(link).toHaveAttribute("href", await image.getAttribute("src"));
+    await expect(link).toHaveAttribute("target", "_blank");
+  }
+});
+
 test("feature tabs work by pointer and keyboard", async ({ page }) => {
   await page.goto("/");
   const remote = page.getByRole("tab", { name: /Pilotez à distance/ });
