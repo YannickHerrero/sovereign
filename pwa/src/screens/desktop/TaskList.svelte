@@ -2,7 +2,7 @@
   import Icon from '../../components/Icon.svelte';
   import { router } from '../../lib/router.svelte';
   import { prefs } from '../../lib/prefs.svelte';
-  import { dotColor, groupTasks, stateMeta, type Filter } from '../../lib/tasks';
+  import { dotVariant, groupTasks, isActive, type Filter } from '../../lib/tasks';
   import type { WorkspaceStore } from '../../lib/workspace.svelte';
 
   let { store, filter, activeTaskId }: { store: WorkspaceStore; filter: Filter; activeTaskId: string | undefined } = $props();
@@ -11,7 +11,7 @@
 
   const groups = $derived(groupTasks(prefs.grouping, store.tasks, query, filter));
   const byRepo = $derived(prefs.grouping === 'repo');
-  const running = $derived(store.tasks.filter((t) => t.state === 'working').length);
+  const running = $derived(store.tasks.filter(isActive).length);
   const subtitle = $derived(
     !store.loaded
       ? 'Loading…'
@@ -63,14 +63,9 @@
         <div class="group">{g.label}</div>
       {/if}
       {#each collapsed ? [] : g.items as t (t.id)}
-        {@const meta = stateMeta(t.state)}
         <button class="row" class:active={t.id === activeTaskId} onclick={() => router.go({ name: 'chat', wsId: store.server.id, taskId: t.id })}>
           <div class="dotcol">
-            {#if t.state === 'working'}
-              <span class="dot dot--pulse"></span>
-            {:else}
-              <span class="dot" style:background={dotColor(t)}></span>
-            {/if}
+            <span class="dot dot--{dotVariant(t)}"></span>
           </div>
           <div class="main">
             <div class="task-title">{t.title}</div>
@@ -79,8 +74,6 @@
               {#if t.agent === 'claude'}
                 <span class="agent-tag">Claude</span>
               {/if}
-              <span class="sep">·</span>
-              <span style:color={meta.color}>{meta.label}</span>
               {#if t.plus + t.minus > 0}
                 <span class="sep">·</span>
                 <span class="plus">+{t.plus}</span>

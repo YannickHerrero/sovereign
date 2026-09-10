@@ -1,5 +1,5 @@
 import { isToday } from './format';
-import type { TaskState, TaskSummary } from './types';
+import type { TaskSummary } from './types';
 
 export type Filter = null | 'Working' | 'Has changes' | 'Failed';
 
@@ -16,10 +16,15 @@ export interface Group {
   running: number;
 }
 
+/** Working or waiting on the user: the agent has not settled. */
+export function isActive(task: Pick<TaskSummary, 'state'>): boolean {
+  return task.state === 'working' || task.state === 'blocked';
+}
+
 export function matches(task: TaskSummary, query: string, filter: Filter): boolean {
   const q = query.trim().toLowerCase();
   if (q && !`${task.title} ${task.repo}`.toLowerCase().includes(q)) return false;
-  if (filter === 'Working') return task.state === 'working';
+  if (filter === 'Working') return isActive(task);
   if (filter === 'Has changes') return task.plus + task.minus > 0;
   if (filter === 'Failed') return task.state === 'failed';
   return true;
@@ -50,7 +55,7 @@ export function groupByRepo(tasks: TaskSummary[], query: string, filter: Filter)
       key: `repo:${repo}`,
       label: repo,
       items: items.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updated_at - a.updated_at),
-      running: items.filter((t) => t.state === 'working').length,
+      running: items.filter(isActive).length,
     }))
     .sort((a, b) => Math.max(...b.items.map((t) => t.updated_at)) - Math.max(...a.items.map((t) => t.updated_at)));
 }
@@ -59,33 +64,17 @@ export function groupTasks(grouping: Grouping, tasks: TaskSummary[], query: stri
   return grouping === 'repo' ? groupByRepo(tasks, query, filter) : group(tasks, query, filter);
 }
 
-export interface StateMeta {
-  label: string;
-  /** CSS color for the label */
-  color: string;
-}
-
-export function stateMeta(state: TaskState): StateMeta {
-  switch (state) {
-    case 'working':
-      return { label: 'Working', color: 'var(--accent)' };
-    case 'done':
-      return { label: '✓ Done', color: 'var(--muted-2)' };
-    case 'failed':
-      return { label: 'Failed', color: 'var(--muted-2)' };
-    case 'no_changes':
-      return { label: 'No Changes', color: 'var(--muted-2)' };
-    case 'pending':
-      return { label: 'Starting', color: 'var(--muted-2)' };
-  }
-}
+/** Visual variants of the list dot; each maps to a `.dot--<variant>` class. */
+export type DotVariant = 'working' | 'alert' | 'fresh' | 'idle';
 
 /**
- * The dot asks for attention rather than restating the outcome: red for failures, green for a
- * finished run the user has not opened yet, grey once seen. Working tasks render a pulsing dot.
+ * The dot asks for attention rather than restating the outcome, following Herdr's convention:
+ * amber pulse while the agent works, red when it waits on the user or failed, green for a
+ * finished run not opened yet, and a grey outline once seen.
  */
-export function dotColor(task: Pick<TaskSummary, 'state' | 'unread'>): string {
-  if (task.state === 'failed') return 'var(--red)';
-  if (task.unread) return 'var(--green)';
-  return 'var(--muted-5)';
+export function dotVariant(task: Pick<TaskSummary, 'state' | 'unread'>): DotVariant {
+  if (task.state === 'working') return 'working';
+  if (task.state === 'blocked' || task.state === 'failed') return 'alert';
+  if (task.unread) return 'fresh';
+  return 'idle';
 }

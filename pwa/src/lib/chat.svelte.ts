@@ -1,5 +1,6 @@
 import { api } from './api';
 import { ago } from './format';
+import { isActive } from './tasks';
 import { answerBody, normalize, type AgentRequest, type Answers } from './requests';
 import type { ModelRef, FileDiff, ImageContent, RunEvent, TaskDetail, TaskSummary, TouchedFile, Turn } from './types';
 import type { WorkspaceStore } from './workspace.svelte';
@@ -40,7 +41,7 @@ export class ChatSession {
   }
 
   get working(): boolean {
-    return this.summary?.state === 'working' || this.live !== null;
+    return (this.summary !== undefined && isActive(this.summary)) || this.live !== null;
   }
 
   get touched(): TouchedFile[] {

@@ -19,6 +19,7 @@
   --accent-hover: #1f5691;
   --green: #2e8b57;
   --red: #c4483c;
+  --amber: #d29a2c;
   --purple: #7a5aa8;
   --orange: #c8863c;
   --dark: #22201c;
@@ -224,11 +225,25 @@ textarea {
   flex: none;
 }
 
-.dot--pulse {
+.dot--pulse,
+.dot--working {
   width: 7px;
   height: 7px;
-  background: var(--accent);
+  background: var(--amber);
   animation: pulseDot 1.5s ease-in-out infinite;
+}
+
+.dot--alert {
+  background: var(--red);
+}
+
+.dot--fresh {
+  background: var(--green);
+}
+
+.dot--idle {
+  box-sizing: border-box;
+  border: 1.5px solid var(--muted-4);
 }
 
 .sep {

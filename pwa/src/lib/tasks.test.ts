@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dotColor, group, groupByRepo } from './tasks';
+import { dotVariant, group, groupByRepo } from './tasks';
 import type { TaskSummary } from './types';
 
 function task(over: Partial<TaskSummary>): TaskSummary {
@@ -26,11 +26,13 @@ describe('groupByRepo', () => {
     task({ id: 'a3', repo: 'alpha', updated_at: 70, state: 'working', plus: 0 }),
     task({ id: 'b1', repo: 'beta', updated_at: 90 }),
     task({ id: 'c1', repo: 'gamma', title: 'needle', updated_at: 5, state: 'failed', plus: 0 }),
+    task({ id: 'd1', repo: 'delta', updated_at: 8, state: 'blocked', plus: 0 }),
   ];
 
   it('orders repos by latest activity and pinned tasks first inside a repo', () => {
     const groups = groupByRepo(tasks, '', null);
-    expect(groups.map((g) => g.label)).toEqual(['beta', 'alpha', 'gamma']);
+    expect(groups.map((g) => g.label)).toEqual(['beta', 'alpha', 'delta', 'gamma']);
+    expect(groups[2].running).toBe(1);
     expect(groups[1].items.map((t) => t.id)).toEqual(['a2', 'a3', 'a1']);
     expect(groups[1].running).toBe(1);
     expect(groups[1].key).toBe('repo:alpha');
@@ -38,7 +40,7 @@ describe('groupByRepo', () => {
 
   it('applies the search and the state filter and drops empty repos', () => {
     expect(groupByRepo(tasks, 'needle', null).map((g) => g.label)).toEqual(['gamma']);
-    expect(groupByRepo(tasks, '', 'Working').map((g) => g.label)).toEqual(['alpha']);
+    expect(groupByRepo(tasks, '', 'Working').map((g) => g.label)).toEqual(['alpha', 'delta']);
     expect(groupByRepo(tasks, '', 'Has changes').map((g) => [g.label, g.items.length])).toEqual([
       ['beta', 1],
       ['alpha', 2],
@@ -51,16 +53,18 @@ describe('groupByRepo', () => {
   });
 });
 
-describe('dotColor', () => {
-  it('highlights unread finished tasks and greys them out once seen', () => {
-    expect(dotColor({ state: 'done', unread: true })).toBe('var(--green)');
-    expect(dotColor({ state: 'no_changes', unread: true })).toBe('var(--green)');
-    expect(dotColor({ state: 'done', unread: false })).toBe('var(--muted-5)');
-    expect(dotColor({ state: 'pending', unread: false })).toBe('var(--muted-5)');
+describe('dotVariant', () => {
+  it('highlights unread finished tasks and outlines them once seen', () => {
+    expect(dotVariant({ state: 'done', unread: true })).toBe('fresh');
+    expect(dotVariant({ state: 'no_changes', unread: true })).toBe('fresh');
+    expect(dotVariant({ state: 'done', unread: false })).toBe('idle');
+    expect(dotVariant({ state: 'pending', unread: false })).toBe('idle');
   });
 
-  it('keeps failures red whether or not they were seen', () => {
-    expect(dotColor({ state: 'failed', unread: true })).toBe('var(--red)');
-    expect(dotColor({ state: 'failed', unread: false })).toBe('var(--red)');
+  it('pulses while working and alerts on questions and failures regardless of unread', () => {
+    expect(dotVariant({ state: 'working', unread: false })).toBe('working');
+    expect(dotVariant({ state: 'blocked', unread: false })).toBe('alert');
+    expect(dotVariant({ state: 'failed', unread: true })).toBe('alert');
+    expect(dotVariant({ state: 'failed', unread: false })).toBe('alert');
   });
 });

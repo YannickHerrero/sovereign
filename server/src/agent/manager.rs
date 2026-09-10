@@ -54,6 +54,8 @@ struct RunAcc {
     at: u64,
     /// Change counts since the task baseline when this run started.
     run_start: Option<git::Counts>,
+    /// A UI request is waiting for the user's answer.
+    blocked: bool,
 }
 
 pub struct Agents {
@@ -140,8 +142,27 @@ impl Agents {
         self.agents.lock().unwrap().values().filter(|a| a.streaming.load(Ordering::Relaxed)).count()
     }
 
+    fn is_blocked(&self, task_id: &str) -> bool {
+        self.runs.lock().unwrap().get(task_id).is_some_and(|acc| acc.blocked)
+    }
+
     pub fn summary(&self, task: &Task) -> TaskSummary {
-        summarize(task, self.is_working(&task.id))
+        summarize(task, self.is_working(&task.id), self.is_blocked(&task.id))
+    }
+
+    fn set_blocked(&self, task_id: &str, blocked: bool) {
+        let changed = {
+            let mut runs = self.runs.lock().unwrap();
+            let Some(acc) = runs.get_mut(task_id) else { return };
+            let changed = acc.blocked != blocked;
+            acc.blocked = blocked;
+            changed
+        };
+        if changed {
+            if let Some(task) = self.store.get(task_id) {
+                self.broadcast_task(&task);
+            }
+        }
     }
 
     pub fn broadcast_task(&self, task: &Task) {
@@ -214,7 +235,9 @@ impl Agents {
 
     pub async fn ui_response(&self, task_id: &str, response: Value) -> Result<()> {
         let process = self.process_of(task_id).ok_or_else(|| anyhow!("no agent running"))?;
-        process.respond(response).await
+        process.respond(response).await?;
+        self.set_blocked(task_id, false);
+        Ok(())
     }
 
     pub async fn stop(&self, task_id: &str) {
@@ -334,7 +357,13 @@ impl Agents {
                 streaming.store(false, Ordering::Relaxed);
                 self.settle(task_id, None).await;
             }
-            RunSignal::Request(request) => self.emit(task_id, RunEvent::UiRequest { request }),
+            RunSignal::Request(request) => {
+                // pi's `notify` is fire-and-forget; every other request waits for an answer.
+                if request.get("method").and_then(Value::as_str) != Some("notify") {
+                    self.set_blocked(task_id, true);
+                }
+                self.emit(task_id, RunEvent::UiRequest { request });
+            }
             RunSignal::Error(message) => self.emit(task_id, RunEvent::Error { message }),
         }
     }

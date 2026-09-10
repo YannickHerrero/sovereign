@@ -8,6 +8,8 @@ use crate::store::Task;
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskState {
+    /// The agent is waiting for the user to answer a question.
+    Blocked,
     Working,
     Done,
     NoChanges,
@@ -31,8 +33,10 @@ pub struct TaskSummary {
     pub unread: bool,
 }
 
-pub fn summarize(task: &Task, working: bool) -> TaskSummary {
-    let state = if working {
+pub fn summarize(task: &Task, working: bool, blocked: bool) -> TaskSummary {
+    let state = if blocked {
+        TaskState::Blocked
+    } else if working {
         TaskState::Working
     } else {
         match task.last_status {
@@ -68,4 +72,48 @@ pub fn provisional_title(message: &str) -> String {
     let cut: String = line.chars().take(MAX).collect();
     let cut = cut.rsplit_once(' ').map(|(head, _)| head).unwrap_or(&cut);
     format!("{cut}…")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn task(last_status: Option<RunStatus>, touched: bool) -> Task {
+        Task {
+            id: "t".into(),
+            agent: Default::default(),
+            repo: "r".into(),
+            cwd: "/tmp".into(),
+            session_id: "s".into(),
+            session_file: None,
+            title: "t".into(),
+            pinned: false,
+            created_at: 0,
+            updated_at: 10,
+            seen_at: 0,
+            last_status,
+            running: false,
+            baseline: None,
+            touched_files: if touched { vec![crate::store::TouchedFile { path: "a".into(), plus: 1, minus: 0 }] } else { vec![] },
+        }
+    }
+
+    #[test]
+    fn blocked_wins_over_working_which_wins_over_the_outcome() {
+        let t = task(Some(RunStatus::Settled), true);
+        assert_eq!(summarize(&t, true, true).state, TaskState::Blocked);
+        assert_eq!(summarize(&t, true, false).state, TaskState::Working);
+        assert_eq!(summarize(&t, false, false).state, TaskState::Done);
+        assert_eq!(summarize(&task(Some(RunStatus::Settled), false), false, false).state, TaskState::NoChanges);
+        assert_eq!(summarize(&task(Some(RunStatus::Aborted), true), false, false).state, TaskState::Failed);
+        assert_eq!(summarize(&task(None, false), false, false).state, TaskState::Pending);
+    }
+
+    #[test]
+    fn unread_follows_seen_at() {
+        let mut t = task(Some(RunStatus::Settled), true);
+        assert!(summarize(&t, false, false).unread);
+        t.seen_at = 10;
+        assert!(!summarize(&t, false, false).unread);
+    }
 }

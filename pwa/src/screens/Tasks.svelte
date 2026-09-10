@@ -4,7 +4,7 @@
   import { api } from '../lib/api';
   import { router } from '../lib/router.svelte';
   import { prefs } from '../lib/prefs.svelte';
-  import { FILTERS, dotColor, groupTasks, stateMeta, type Filter } from '../lib/tasks';
+  import { FILTERS, dotVariant, groupTasks, type Filter } from '../lib/tasks';
   import type { ImageContent, PiModel, Repo } from '../lib/types';
   import type { WorkspaceStore } from '../lib/workspace.svelte';
 
@@ -121,14 +121,9 @@
         <div class="group">{g.label}</div>
       {/if}
       {#each collapsed ? [] : g.items as t (t.id)}
-        {@const meta = stateMeta(t.state)}
         <button class="row" onclick={() => router.go({ name: 'chat', wsId: store.server.id, taskId: t.id })}>
           <div class="dotcol">
-            {#if t.state === 'working'}
-              <span class="dot dot--pulse"></span>
-            {:else}
-              <span class="dot" style:background={dotColor(t)}></span>
-            {/if}
+            <span class="dot dot--{dotVariant(t)}"></span>
           </div>
           <div class="main">
             <div class="task-title">{t.title}</div>
@@ -137,8 +132,6 @@
               {#if t.agent === 'claude'}
                 <span class="agent-tag">Claude</span>
               {/if}
-              <span class="sep">·</span>
-              <span style:color={meta.color}>{meta.label}</span>
               {#if t.plus + t.minus > 0}
                 <span class="sep">·</span>
                 <span class="plus">+{t.plus}</span>

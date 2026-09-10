@@ -1,4 +1,4 @@
-export type TaskState = 'working' | 'done' | 'no_changes' | 'failed' | 'pending';
+export type TaskState = 'blocked' | 'working' | 'done' | 'no_changes' | 'failed' | 'pending';
 
 export type AgentKind = 'pi' | 'claude';
 
