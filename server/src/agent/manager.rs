@@ -154,8 +154,14 @@ impl Agents {
 
     /// Reads the task transcript from disk without touching any process.
     pub fn transcript(&self, task: &Task) -> Result<Session> {
-        match task.session_file.as_ref().filter(|f| f.exists()) {
-            Some(file) => self.backend(task.agent)?.read_transcript(file),
+        let backend = self.backend(task.agent)?;
+        match backend.locate_session(task) {
+            Some(file) => {
+                if task.session_file.as_ref() != Some(&file) {
+                    let _ = self.store.update(&task.id, |t| t.session_file = Some(file.clone()));
+                }
+                backend.read_transcript(&file)
+            }
             None => Ok(Session::default()),
         }
     }
@@ -219,6 +225,13 @@ impl Agents {
         self.runs.lock().unwrap().remove(task_id);
     }
 
+    /// Re-records where the transcript lives: the agent may have moved it during a run.
+    async fn refresh_session_file(&self, task_id: &str, process: &dyn AgentProcess) {
+        if let Some(file) = process.session_file().await {
+            let _ = self.store.update(task_id, |t| t.session_file = Some(file));
+        }
+    }
+
     fn process_of(&self, task_id: &str) -> Option<Arc<dyn AgentProcess>> {
         self.agents.lock().unwrap().get(task_id).map(|a| a.process.clone())
     }
@@ -244,11 +257,7 @@ impl Agents {
         let last_activity = agent.last_activity.clone();
         self.agents.lock().unwrap().insert(task.id.clone(), agent);
 
-        if task.session_file.is_none() {
-            if let Some(file) = process.session_file().await {
-                let _ = self.store.update(&task.id, |t| t.session_file = Some(file));
-            }
-        }
+        self.refresh_session_file(&task.id, process.as_ref()).await;
 
         let manager = self.clone();
         let task_id = task.id.clone();
@@ -333,6 +342,9 @@ impl Agents {
     /// Closes the current run: persists the outcome on the task and emits the final agent turn.
     async fn settle(&self, task_id: &str, forced: Option<RunStatus>) {
         let acc = self.runs.lock().unwrap().remove(task_id).unwrap_or_default();
+        if let Some(process) = self.process_of(task_id) {
+            self.refresh_session_file(task_id, process.as_ref()).await;
+        }
         let status = forced.unwrap_or(acc.status);
         let baseline = self.store.get(task_id).and_then(|t| t.baseline);
         let after = match &baseline {

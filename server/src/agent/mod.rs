@@ -130,6 +130,11 @@ pub trait Backend: Send + Sync {
     /// Starts (or resumes) the agent for `task`; signals flow until the process exits.
     async fn spawn(&self, task: &Task, signals: mpsc::Sender<RunSignal>) -> Result<Arc<dyn AgentProcess>>;
     fn read_transcript(&self, path: &Path) -> Result<Session>;
+    /// Where the transcript of `task` lives right now, if it exists. Backends that move
+    /// transcripts around override the recorded path.
+    fn locate_session(&self, task: &Task) -> Option<PathBuf> {
+        task.session_file.clone().filter(|file| file.exists())
+    }
     /// Models available on this machine for a task that has no session yet.
     async fn discover_models(&self, cwd: &Path) -> Result<ModelList>;
     async fn generate_title(&self, message: &str) -> Result<String>;

@@ -58,7 +58,7 @@ impl Backend for ClaudeBackend {
     }
 
     async fn spawn(&self, task: &Task, signals: mpsc::Sender<RunSignal>) -> Result<Arc<dyn AgentProcess>> {
-        let resumable = session_path(&task.cwd, &task.session_id).exists();
+        let resumable = find_session(&task.session_id).is_some();
         let mut args = if resumable {
             vec!["--resume".to_string(), task.session_id.clone()]
         } else {
@@ -77,6 +77,10 @@ impl Backend for ClaudeBackend {
         });
         tokio::spawn(translate(rx, signals, agent.running.clone(), agent.current_model.clone()));
         Ok(agent)
+    }
+
+    fn locate_session(&self, task: &Task) -> Option<PathBuf> {
+        find_session(&task.session_id)
     }
 
     fn read_transcript(&self, path: &Path) -> Result<Session> {
@@ -198,7 +202,7 @@ impl AgentProcess for ClaudeAgent {
     }
 
     async fn session_file(&self) -> Option<PathBuf> {
-        Some(session_path(&self.cwd, &self.session_id))
+        Some(find_session(&self.session_id).unwrap_or_else(|| session_path(&self.cwd, &self.session_id)))
     }
 
     async fn kill(&self) {
@@ -206,6 +210,7 @@ impl AgentProcess for ClaudeAgent {
     }
 }
 
+/// Where Claude Code will create the transcript of a session started in `cwd`:
 /// `~/.claude/projects/<cwd with every non-alphanumeric byte replaced by '-'>/<id>.jsonl`.
 pub fn session_path(cwd: &Path, session_id: &str) -> PathBuf {
     let encoded: String = cwd
@@ -214,6 +219,23 @@ pub fn session_path(cwd: &Path, session_id: &str) -> PathBuf {
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
         .collect();
     config_dir().join("projects").join(encoded).join(format!("{session_id}.jsonl"))
+}
+
+/// Finds the transcript of a session wherever it lives now. Claude Code files transcripts by
+/// working directory and moves them when the agent enters a worktree, so the path computed at
+/// spawn time goes stale mid-conversation. Prefers the most recently modified file.
+pub fn find_session(session_id: &str) -> Option<PathBuf> {
+    find_session_in(&config_dir().join("projects"), session_id)
+}
+
+fn find_session_in(projects: &Path, session_id: &str) -> Option<PathBuf> {
+    let name = format!("{session_id}.jsonl");
+    std::fs::read_dir(projects)
+        .ok()?
+        .flatten()
+        .map(|entry| entry.path().join(&name))
+        .filter(|path| path.is_file())
+        .max_by_key(|path| path.metadata().and_then(|m| m.modified()).ok())
 }
 
 fn config_dir() -> PathBuf {
@@ -394,6 +416,17 @@ mod tests {
         let dir = path.parent().unwrap().file_name().unwrap().to_str().unwrap();
         assert_eq!(dir, "-home-me-dev-my-repo-v2");
         assert!(path.ends_with("abc.jsonl"));
+    }
+
+    #[test]
+    fn finds_a_transcript_moved_to_another_project_directory() {
+        let projects = std::env::temp_dir().join(format!("sovereign-claude-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(projects.join("-repo")).unwrap();
+        std::fs::create_dir_all(projects.join("-repo--claude-worktrees-x")).unwrap();
+        std::fs::write(projects.join("-repo--claude-worktrees-x/abc.jsonl"), "{}\n").unwrap();
+        assert_eq!(find_session_in(&projects, "abc").unwrap(), projects.join("-repo--claude-worktrees-x/abc.jsonl"));
+        assert!(find_session_in(&projects, "missing").is_none());
+        std::fs::remove_dir_all(&projects).unwrap();
     }
 
     #[test]
