@@ -30,6 +30,8 @@ pub enum RunStatus {
     Settled,
     Error,
     Aborted,
+    /// The server stopped while the agent was working.
+    Interrupted,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -25,6 +25,10 @@ pub struct Task {
     pub updated_at: u64,
     /// Outcome of the most recent run; None until the first run settles.
     pub last_status: Option<RunStatus>,
+    /// True while an agent turn is in flight. Still set after a restart means the run was killed
+    /// with the server; startup turns those tasks into `RunStatus::Interrupted`.
+    #[serde(default)]
+    pub running: bool,
     /// Repo state before the task's first run. Files touched by the task are measured from it,
     /// so pi's own commits are included.
     pub baseline: Option<Baseline>,

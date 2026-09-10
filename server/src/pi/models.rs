@@ -71,7 +71,7 @@ mod tests {
             id: "task".into(), agent: Default::default(), repo: "repo".into(), cwd: dir.clone(),
             session_id: uuid::Uuid::new_v4().to_string(), session_file: None,
             title: "test".into(), pinned: false, created_at: 0, updated_at: 0,
-            last_status: None, baseline: None, touched_files: vec![],
+            last_status: None, running: false, baseline: None, touched_files: vec![],
         };
         store.insert(task.clone()).unwrap();
         let config = crate::config::Config { pi_bin: bin.into(), ..Default::default() };

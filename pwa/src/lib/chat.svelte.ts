@@ -228,7 +228,7 @@ export class ChatSession {
 
   metaLabel(turn: Extract<Turn, { role: 'agent' }>): string {
     const when = ago(turn.at, this.now);
-    const word = turn.status === 'settled' ? 'Finished' : turn.status === 'aborted' ? 'Stopped' : 'Failed';
+    const word = turn.status === 'settled' ? 'Finished' : turn.status === 'aborted' ? 'Stopped' : turn.status === 'interrupted' ? 'Interrupted' : 'Failed';
     return when === 'now' ? `${word} now` : `${word} ${when}`;
   }
 

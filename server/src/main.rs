@@ -50,6 +50,7 @@ async fn main() -> Result<()> {
     }
     anyhow::ensure!(!backends.is_empty(), "no coding agent found: install pi or Claude Code");
     let agents = Agents::new(config.clone(), store.clone(), backends);
+    agents.recover_interrupted().await;
     let listen = config.listen.clone();
     let state = Arc::new(api::AppState { config, store, agents, started_at: Instant::now() });
     let listener = tokio::net::TcpListener::bind(&listen).await?;

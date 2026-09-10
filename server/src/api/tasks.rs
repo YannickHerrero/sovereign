@@ -90,6 +90,7 @@ pub async fn create(
         created_at: now,
         updated_at: now,
         last_status: None,
+        running: false,
         baseline: None,
         touched_files: Vec::new(),
     };

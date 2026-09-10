@@ -80,6 +80,16 @@ impl Agents {
         agents
     }
 
+    /// Closes runs that were in flight when the previous server process died. Their agent
+    /// processes died with it, so the outcome is `Interrupted`; files already written are
+    /// still measured from the baseline.
+    pub async fn recover_interrupted(&self) {
+        for task in self.store.all().into_iter().filter(|t| t.running) {
+            tracing::warn!(task = %task.id, "run interrupted by a server restart");
+            self.settle(&task.id, Some(RunStatus::Interrupted)).await;
+        }
+    }
+
     pub fn kinds(&self) -> Vec<AgentKind> {
         let mut kinds: Vec<AgentKind> = self.backends.keys().copied().collect();
         kinds.sort_by_key(|k| *k as u8);
@@ -277,7 +287,7 @@ impl Agents {
                 let acc = RunAcc { run_start, ..RunAcc::default() };
                 self.runs.lock().unwrap().insert(task_id.to_string(), acc);
                 self.emit(task_id, RunEvent::AgentStart);
-                if let Some(task) = self.store.get(task_id) {
+                if let Ok(Some(task)) = self.store.update(task_id, |t| t.running = true) {
                     self.broadcast_task(&task);
                 }
             }
@@ -347,6 +357,7 @@ impl Agents {
         let updated = self.store.update(task_id, |t| {
             t.updated_at = now;
             t.last_status = Some(status);
+            t.running = false;
             t.touched_files = task_files;
         });
         let turn = Turn::Agent {

@@ -17,7 +17,7 @@ export interface TaskSummary {
   updated_at: number;
 }
 
-export type RunStatus = 'settled' | 'error' | 'aborted';
+export type RunStatus = 'settled' | 'error' | 'aborted' | 'interrupted';
 
 export interface ModelRef {
   agent: AgentKind;

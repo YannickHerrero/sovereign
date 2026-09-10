@@ -35,7 +35,7 @@ pub fn summarize(task: &Task, working: bool) -> TaskSummary {
     } else {
         match task.last_status {
             None => TaskState::Pending,
-            Some(RunStatus::Error | RunStatus::Aborted) => TaskState::Failed,
+            Some(RunStatus::Error | RunStatus::Aborted | RunStatus::Interrupted) => TaskState::Failed,
             Some(RunStatus::Settled) if task.touched_files.is_empty() => TaskState::NoChanges,
             Some(RunStatus::Settled) => TaskState::Done,
         }
