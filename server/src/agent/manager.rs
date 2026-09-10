@@ -2,6 +2,8 @@
 //! state (git baseline, touched files, turns) and WebSocket events.
 
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -11,7 +13,7 @@ use serde::Serialize;
 use serde_json::Value;
 use tokio::sync::{broadcast, mpsc};
 
-use super::{AgentKind, AgentProcess, Backend, Model, ModelList, ModelRef, RunSignal, RunStatus, Session, Turn};
+use super::{AgentKind, AgentProcess, Backend, Model, ModelList, ModelRef, QueuedMessage, RunSignal, RunStatus, Session, Turn};
 use crate::config::Config;
 use crate::git;
 use crate::pi::image::ImageContent;
@@ -37,7 +39,13 @@ pub enum RunEvent {
     Error { message: String },
     UiRequest { request: Value },
     ModelChanged { model: Model },
+    /// The server-held queue changed (message added, sent, steered or removed).
+    QueueUpdate { queued: Vec<QueuedMessage> },
+    /// A queued message reached the agent, as a follow-up prompt or a steer.
+    UserTurn { turn: Turn },
 }
+
+type BoxedProcess<'a> = Pin<Box<dyn Future<Output = Result<Arc<dyn AgentProcess>>> + Send + 'a>>;
 
 struct Agent {
     process: Arc<dyn AgentProcess>,
@@ -64,6 +72,8 @@ pub struct Agents {
     backends: HashMap<AgentKind, Arc<dyn Backend>>,
     agents: Mutex<HashMap<String, Agent>>,
     runs: Mutex<HashMap<String, RunAcc>>,
+    /// Messages sent while a run was in progress, oldest first, dispatched one per settled run.
+    queues: Mutex<HashMap<String, Vec<QueuedMessage>>>,
     events: broadcast::Sender<ServerEvent>,
 }
 
@@ -76,6 +86,7 @@ impl Agents {
             backends: backends.into_iter().map(|b| (b.kind(), b)).collect(),
             agents: Mutex::new(HashMap::new()),
             runs: Mutex::new(HashMap::new()),
+            queues: Mutex::new(HashMap::new()),
             events,
         });
         tokio::spawn(agents.clone().reap_idle());
@@ -199,16 +210,108 @@ impl Agents {
         self.backend(kind)?.generate_title(message).await
     }
 
-    /// Sends a user message to the task's agent, spawning it if needed. Queued when a run is
-    /// already in progress.
-    pub async fn prompt(self: &Arc<Self>, task: &Task, message: &str, images: &[ImageContent]) -> Result<()> {
+    /// Sends a user message to the task's agent, spawning it if needed. While a run is in
+    /// progress (or earlier messages are still waiting) the message is queued instead, and the
+    /// queued entry is returned.
+    pub async fn prompt(
+        self: &Arc<Self>,
+        task: &Task,
+        message: &str,
+        images: &[ImageContent],
+    ) -> Result<Option<QueuedMessage>> {
         let process = self.ensure_agent(task).await?;
-        let queued = self.is_working(&task.id);
         let at = crate::store::now_ms();
-        process.prompt(message, images, queued).await?;
+        if self.is_working(&task.id) || self.has_queue(&task.id) {
+            let queued = QueuedMessage {
+                id: uuid::Uuid::new_v4().to_string(),
+                text: message.to_string(),
+                images: images.to_vec(),
+                at,
+            };
+            self.queues.lock().unwrap().entry(task.id.clone()).or_default().push(queued.clone());
+            self.emit_queue(&task.id);
+            return Ok(Some(queued));
+        }
+        process.prompt(message, images).await?;
         self.record_message(&task.id, at);
         self.touch(&task.id);
+        Ok(None)
+    }
+
+    pub fn queued(&self, task_id: &str) -> Vec<QueuedMessage> {
+        self.queues.lock().unwrap().get(task_id).cloned().unwrap_or_default()
+    }
+
+    fn has_queue(&self, task_id: &str) -> bool {
+        self.queues.lock().unwrap().get(task_id).is_some_and(|q| !q.is_empty())
+    }
+
+    fn take_queued(&self, task_id: &str, message_id: &str) -> Option<QueuedMessage> {
+        let mut queues = self.queues.lock().unwrap();
+        let queue = queues.get_mut(task_id)?;
+        let index = queue.iter().position(|m| m.id == message_id)?;
+        Some(queue.remove(index))
+    }
+
+    fn emit_queue(&self, task_id: &str) {
+        self.emit(task_id, RunEvent::QueueUpdate { queued: self.queued(task_id) });
+    }
+
+    /// Pulls a queued message out of the queue and hands it to the agent right away: as a steer
+    /// while the run is in progress, as a plain prompt if the run ended meanwhile.
+    pub async fn steer(self: &Arc<Self>, task: &Task, message_id: &str) -> Result<()> {
+        let message = self.take_queued(&task.id, message_id).ok_or_else(|| anyhow!("message is no longer queued"))?;
+        self.emit_queue(&task.id);
+        let process = self.ensure_agent(task).await?;
+        let result = if self.is_working(&task.id) {
+            process.steer(&message.text, &message.images).await
+        } else {
+            process.prompt(&message.text, &message.images).await
+        };
+        if let Err(err) = result {
+            // Put it back where it was so the user can retry or drop it.
+            self.queues.lock().unwrap().entry(task.id.clone()).or_default().insert(0, message);
+            self.emit_queue(&task.id);
+            return Err(err);
+        }
+        self.deliver(&task.id, message);
         Ok(())
+    }
+
+    pub fn remove_queued(&self, task_id: &str, message_id: &str) -> Result<()> {
+        self.take_queued(task_id, message_id).ok_or_else(|| anyhow!("message is no longer queued"))?;
+        self.emit_queue(task_id);
+        Ok(())
+    }
+
+    /// Sends the oldest queued message once a run has settled.
+    async fn dispatch_next(self: &Arc<Self>, task_id: &str) {
+        let next = {
+            let mut queues = self.queues.lock().unwrap();
+            match queues.get_mut(task_id) {
+                Some(queue) if !queue.is_empty() => Some(queue.remove(0)),
+                _ => None,
+            }
+        };
+        let Some(message) = next else { return };
+        self.emit_queue(task_id);
+        let Some(task) = self.store.get(task_id) else { return };
+        let sent = match self.ensure_agent(&task).await {
+            Ok(process) => process.prompt(&message.text, &message.images).await,
+            Err(err) => Err(err),
+        };
+        match sent {
+            Ok(()) => self.deliver(task_id, message),
+            Err(err) => self.emit(task_id, RunEvent::Error { message: format!("sending queued message: {err}") }),
+        }
+    }
+
+    /// Records a queued message that reached the agent and shows it in the thread.
+    fn deliver(&self, task_id: &str, message: QueuedMessage) {
+        let at = crate::store::now_ms();
+        self.record_message(task_id, at);
+        self.touch(task_id);
+        self.emit(task_id, RunEvent::UserTurn { turn: Turn::User { text: message.text, at, images: message.images } });
     }
 
     pub async fn models(self: &Arc<Self>, task: &Task) -> Result<ModelList> {
@@ -230,9 +333,21 @@ impl Agents {
         Ok(model)
     }
 
-    pub async fn abort(&self, task_id: &str) -> Result<()> {
+    /// Stops the current run. Queued messages are dropped rather than sent to a run the user
+    /// just cancelled; they are returned so the client can hand them back to the user.
+    pub async fn abort(&self, task_id: &str) -> Result<Vec<QueuedMessage>> {
         let process = self.process_of(task_id).ok_or_else(|| anyhow!("no agent running"))?;
-        process.abort().await
+        let dropped = self.clear_queue(task_id);
+        process.abort().await?;
+        Ok(dropped)
+    }
+
+    fn clear_queue(&self, task_id: &str) -> Vec<QueuedMessage> {
+        let dropped = self.queues.lock().unwrap().remove(task_id).unwrap_or_default();
+        if !dropped.is_empty() {
+            self.emit_queue(task_id);
+        }
+        dropped
     }
 
     pub async fn rename(&self, task_id: &str, title: &str) {
@@ -256,6 +371,7 @@ impl Agents {
             agent.process.kill().await;
         }
         self.runs.lock().unwrap().remove(task_id);
+        self.queues.lock().unwrap().remove(task_id);
     }
 
     /// Re-records where the transcript lives: the agent may have moved it during a run.
@@ -275,7 +391,12 @@ impl Agents {
         }
     }
 
-    async fn ensure_agent(self: &Arc<Self>, task: &Task) -> Result<Arc<dyn AgentProcess>> {
+    /// Boxed because `pump` -> `dispatch_next` -> `ensure_agent` -> `pump` is recursive.
+    fn ensure_agent<'a>(self: &'a Arc<Self>, task: &'a Task) -> BoxedProcess<'a> {
+        Box::pin(self.spawn_agent(task))
+    }
+
+    async fn spawn_agent(self: &Arc<Self>, task: &Task) -> Result<Arc<dyn AgentProcess>> {
         if let Some(process) = self.process_of(&task.id) {
             return Ok(process);
         }
@@ -321,7 +442,7 @@ impl Agents {
         }
     }
 
-    async fn handle(&self, task_id: &str, signal: RunSignal, streaming: &AtomicBool) {
+    async fn handle(self: &Arc<Self>, task_id: &str, signal: RunSignal, streaming: &AtomicBool) {
         match signal {
             RunSignal::Start => {
                 streaming.store(true, Ordering::Relaxed);
@@ -367,6 +488,7 @@ impl Agents {
             RunSignal::Settled => {
                 streaming.store(false, Ordering::Relaxed);
                 self.settle(task_id, None).await;
+                self.dispatch_next(task_id).await;
             }
             RunSignal::Request(request) => {
                 // pi's `notify` is fire-and-forget; every other request waits for an answer.

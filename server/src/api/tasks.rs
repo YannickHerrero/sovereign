@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use super::{ApiError, SharedState};
 use crate::git;
-use crate::agent::{AgentKind, Model, ModelList, ModelRef, Turn};
+use crate::agent::{AgentKind, Model, ModelList, ModelRef, QueuedMessage, Turn};
 use crate::pi::image::{self, ImageContent};
 use crate::repos;
 use crate::store::{now_ms, Task, TouchedFile};
@@ -21,6 +21,7 @@ pub struct TaskDetail {
     pub branch: Option<String>,
     pub touched_files: Vec<TouchedFile>,
     pub turns: Vec<Turn>,
+    pub queued: Vec<QueuedMessage>,
 }
 
 pub async fn list(State(state): State<SharedState>) -> Json<Vec<TaskSummary>> {
@@ -49,6 +50,7 @@ pub async fn detail(
         branch,
         touched_files: task.touched_files.clone(),
         turns: session.turns,
+        queued: state.agents.queued(&task.id),
     }))
 }
 
@@ -143,23 +145,47 @@ pub struct Prompt {
     images: Vec<ImageContent>,
 }
 
+#[derive(Serialize)]
+pub struct Prompted {
+    /// Set when the message is waiting for the current run to end.
+    queued: Option<QueuedMessage>,
+}
+
 pub async fn prompt(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(body): Json<Prompt>,
-) -> Result<StatusCode, ApiError> {
+) -> Result<(StatusCode, Json<Prompted>), ApiError> {
     let message = body.message.trim();
     image::validate(&body.images).map_err(ApiError::bad_request)?;
     if message.is_empty() && body.images.is_empty() {
         return Err(ApiError::bad_request("message is empty"));
     }
     let task = load(&state, &id)?;
-    state
+    let queued = state
         .agents
         .prompt(&task, message, &body.images)
         .await
         .map_err(|e| ApiError::internal(format!("sending prompt: {e}")))?;
+    Ok((StatusCode::ACCEPTED, Json(Prompted { queued })))
+}
+
+pub async fn steer(
+    State(state): State<SharedState>,
+    Path((id, message_id)): Path<(String, String)>,
+) -> Result<StatusCode, ApiError> {
+    let task = load(&state, &id)?;
+    state.agents.steer(&task, &message_id).await.map_err(|e| ApiError::bad_request(e.to_string()))?;
     Ok(StatusCode::ACCEPTED)
+}
+
+pub async fn remove_queued(
+    State(state): State<SharedState>,
+    Path((id, message_id)): Path<(String, String)>,
+) -> Result<StatusCode, ApiError> {
+    load(&state, &id)?;
+    state.agents.remove_queued(&id, &message_id).map_err(|e| ApiError::not_found(e.to_string()))?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Replaces the provisional title with one written by the task’s harness, unless the user renamed the task first.
@@ -250,10 +276,11 @@ pub async fn file(
     text.ok_or_else(|| ApiError::not_found("file no longer exists in the working tree"))
 }
 
-pub async fn abort(State(state): State<SharedState>, Path(id): Path<String>) -> Result<StatusCode, ApiError> {
+/// Stops the run and returns the queued messages that were dropped with it.
+pub async fn abort(State(state): State<SharedState>, Path(id): Path<String>) -> Result<Json<Vec<QueuedMessage>>, ApiError> {
     load(&state, &id)?;
-    state.agents.abort(&id).await.map_err(|e| ApiError::bad_request(e.to_string()))?;
-    Ok(StatusCode::ACCEPTED)
+    let dropped = state.agents.abort(&id).await.map_err(|e| ApiError::bad_request(e.to_string()))?;
+    Ok(Json(dropped))
 }
 
 #[derive(Deserialize)]

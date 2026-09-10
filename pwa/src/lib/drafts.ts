@@ -19,6 +19,7 @@ function load(): Persisted {
 }
 
 const data: Persisted = load();
+const listeners = new Map<string, Set<(text: string) => void>>();
 
 function persist() {
   try {
@@ -45,5 +46,31 @@ export const drafts = {
   },
   clear(id: string) {
     this.set(id, '');
+  },
+  /**
+   * Hands text back to the composer for `id`: appended live when one is mounted, otherwise
+   * stored for the next time it opens.
+   */
+  push(id: string, text: string) {
+    const live = listeners.get(id);
+    if (live?.size) {
+      for (const listener of live) listener(text);
+      return;
+    }
+    const current = this.get(id);
+    this.set(id, current ? `${current.trimEnd()}\n\n${text}` : text);
+  },
+  /** Receives text pushed to `id` while subscribed. Returns the unsubscribe function. */
+  subscribe(id: string, listener: (text: string) => void): () => void {
+    let set = listeners.get(id);
+    if (!set) {
+      set = new Set();
+      listeners.set(id, set);
+    }
+    set.add(listener);
+    return () => {
+      set.delete(listener);
+      if (set.size === 0) listeners.delete(id);
+    };
   },
 };

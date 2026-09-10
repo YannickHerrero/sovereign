@@ -1,5 +1,5 @@
 import type { Server } from './settings.svelte';
-import type { ModelList, ModelRef, PiModel, ImageContent, FileDiff, Repo, ServerEvent, TaskDetail, TaskSummary, Workspace } from './types';
+import type { ModelList, ModelRef, PiModel, ImageContent, FileDiff, QueuedMessage, Repo, ServerEvent, TaskDetail, TaskSummary, Workspace } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -71,9 +71,15 @@ export const api = {
   },
   createTask: (s: Server, repo: string, message: string, images: ImageContent[] = [], model?: ModelRef | null) =>
     request<TaskSummary>(s, 'POST', '/tasks', { repo, message, images, ...(model ? { model } : {}) }, 125000),
+  /** `queued` is set when the server held the message back; older servers return no body. */
   prompt: (s: Server, id: string, message: string, images: ImageContent[] = []) =>
-    request<void>(s, 'POST', `/tasks/${id}/prompt`, { message, images }),
-  abort: (s: Server, id: string) => request<void>(s, 'POST', `/tasks/${id}/abort`),
+    request<{ queued: QueuedMessage | null } | undefined>(s, 'POST', `/tasks/${id}/prompt`, { message, images }),
+  steer: (s: Server, id: string, messageId: string) =>
+    request<void>(s, 'POST', `/tasks/${id}/queue/${messageId}/steer`),
+  removeQueued: (s: Server, id: string, messageId: string) =>
+    request<void>(s, 'DELETE', `/tasks/${id}/queue/${messageId}`),
+  /** Resolves with the queued messages the server dropped along with the run. */
+  abort: (s: Server, id: string) => request<QueuedMessage[] | undefined>(s, 'POST', `/tasks/${id}/abort`),
   patchTask: (s: Server, id: string, patch: { pinned?: boolean; title?: string; seen?: true }) =>
     request<TaskSummary>(s, 'PATCH', `/tasks/${id}`, patch),
   deleteTask: (s: Server, id: string) => request<void>(s, 'DELETE', `/tasks/${id}`),

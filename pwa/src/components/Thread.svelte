@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import type { ChatSession } from '../lib/chat.svelte';
+  import Icon from './Icon.svelte';
   import Markdown from './Markdown.svelte';
   import RequestCard from './RequestCard.svelte';
 
@@ -78,6 +79,26 @@
       <RequestCard {request} onAnswer={(answers) => session.answer(request, answers)} />
     {/each}
 
+    {#each session.queued as message (message.id)}
+      <div class="queued">
+        <div class="user user--queued">
+          {#each message.images as image}
+            <img class="message-image" src={`data:${image.mimeType};base64,${image.data}`} alt="Attachment" />
+          {/each}
+          {message.text}
+        </div>
+        <div class="queued-bar">
+          <span class="queued-label">Queued</span>
+          {#if session.canSteer}
+            <button class="steer" onclick={() => session.steer(message)}>Steer</button>
+          {/if}
+          <button class="drop" aria-label="Remove queued message" title="Remove" onclick={() => session.removeQueued(message)}>
+            <Icon name="close" color="currentColor" />
+          </button>
+        </div>
+      </div>
+    {/each}
+
     {#if session.notice}
       <div class="notice">{session.notice}</div>
     {/if}
@@ -136,6 +157,49 @@
     border-radius: 16px;
     font-size: 14px;
     animation-duration: 0.2s;
+  }
+  .queued {
+    align-self: flex-end;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    max-width: 80%;
+    animation: fadeUp 0.22s ease both;
+  }
+  .desktop .queued {
+    max-width: 74%;
+  }
+  .queued .user {
+    max-width: none;
+    animation: none;
+    color: var(--muted);
+    border: 1px dashed var(--muted-5);
+    background: transparent;
+  }
+  .queued-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 6px;
+    font-size: 12px;
+    color: var(--muted-2);
+  }
+  .steer {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .steer:hover {
+    color: var(--accent-hover);
+  }
+  .drop {
+    display: flex;
+    padding: 3px;
+    color: var(--muted-3);
+  }
+  .drop:hover {
+    color: var(--ink);
   }
   .agent {
     min-width: 0;

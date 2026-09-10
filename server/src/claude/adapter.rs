@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
 use serde_json::{json, Value};
 use tokio::process::Command;
@@ -151,8 +151,7 @@ pub struct ClaudeAgent {
 
 #[async_trait]
 impl AgentProcess for ClaudeAgent {
-    async fn prompt(&self, message: &str, images: &[ImageContent], _queued: bool) -> Result<()> {
-        // Claude Code queues messages that arrive while a turn is running.
+    async fn prompt(&self, message: &str, images: &[ImageContent]) -> Result<()> {
         let mut content = Vec::new();
         if !message.is_empty() {
             content.push(json!({ "type": "text", "text": message }));
@@ -166,6 +165,11 @@ impl AgentProcess for ClaudeAgent {
         self.process
             .send(&json!({ "type": "user", "message": { "role": "user", "content": content } }))
             .await
+    }
+
+    async fn steer(&self, _message: &str, _images: &[ImageContent]) -> Result<()> {
+        // Claude Code's stdio protocol only queues user messages until the turn ends.
+        Err(anyhow!("Claude Code cannot be steered mid-turn"))
     }
 
     async fn abort(&self) -> Result<()> {
@@ -466,7 +470,7 @@ mod tests {
         };
         let (tx, mut rx) = mpsc::channel(64);
         let agent = backend.spawn(&task, tx).await.unwrap();
-        agent.prompt("hello", &[], false).await.unwrap();
+        agent.prompt("hello", &[]).await.unwrap();
 
         let mut kinds = Vec::new();
         let mut text = String::new();

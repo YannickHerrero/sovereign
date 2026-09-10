@@ -5,7 +5,7 @@ use axum::extract::{DefaultBodyLimit, Request, State};
 use axum::http::{header, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use serde::Serialize;
 use tower_http::cors::{Any, CorsLayer};
@@ -39,6 +39,8 @@ pub fn router(state: SharedState) -> Router {
         .route("/tasks/{id}/models", get(tasks::models))
         .route("/tasks/{id}/model", post(tasks::set_model))
         .route("/tasks/{id}/abort", post(tasks::abort))
+        .route("/tasks/{id}/queue/{message_id}", delete(tasks::remove_queued))
+        .route("/tasks/{id}/queue/{message_id}/steer", post(tasks::steer))
         .route("/tasks/{id}/diff", get(tasks::diff))
         .route("/tasks/{id}/file", get(tasks::file))
         .route("/tasks/{id}/ui-response", post(tasks::ui_response))

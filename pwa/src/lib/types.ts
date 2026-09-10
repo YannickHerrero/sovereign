@@ -52,6 +52,14 @@ export type Turn =
   | { role: 'user'; text: string; at: number; images?: ImageContent[] }
   | { role: 'agent'; text: string; files: string[]; at: number; status: RunStatus };
 
+/** A message the server holds until the current run ends. */
+export interface QueuedMessage {
+  id: string;
+  text: string;
+  images: ImageContent[];
+  at: number;
+}
+
 export interface TouchedFile {
   path: string;
   plus: number;
@@ -63,6 +71,8 @@ export interface TaskDetail extends TaskSummary {
   branch: string | null;
   touched_files: TouchedFile[];
   turns: Turn[];
+  /** Absent on older servers. */
+  queued?: QueuedMessage[];
 }
 
 export interface FileDiff extends TouchedFile {
@@ -92,7 +102,9 @@ export type RunEvent =
   | { kind: 'settled'; turn: Turn }
   | { kind: 'error'; message: string }
   | { kind: 'ui_request'; request: Record<string, unknown> }
-  | { kind: 'model_changed'; model: Model };
+  | { kind: 'model_changed'; model: Model }
+  | { kind: 'queue_update'; queued: QueuedMessage[] }
+  | { kind: 'user_turn'; turn: Turn };
 
 export type ServerEvent =
   | { type: 'task_upsert'; task: TaskSummary }

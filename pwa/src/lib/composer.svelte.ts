@@ -23,10 +23,14 @@ export class ComposerState {
 
   private voice: VoiceSession | null = null;
   private ticker: ReturnType<typeof setInterval> | undefined;
+  private unsubscribeDrafts: (() => void) | undefined;
 
   /** @param draftKey when given, the text is restored from and saved to `drafts` under this id. */
   constructor(private readonly draftKey?: string) {
-    if (draftKey) this.#draft = drafts.get(draftKey);
+    if (draftKey) {
+      this.#draft = drafts.get(draftKey);
+      this.unsubscribeDrafts = drafts.subscribe(draftKey, (text) => this.restore(text));
+    }
   }
 
   get draft(): string {
@@ -57,6 +61,11 @@ export class ComposerState {
   /** Appends text typed or pasted while the field had no focus. */
   append(text: string) {
     this.draft += text;
+  }
+
+  /** Puts a message the server gave back (a dropped queued message) into the draft. */
+  private restore(text: string) {
+    this.draft = this.draft.trim() ? `${this.draft.trimEnd()}\n\n${text}` : text;
   }
 
   /**
@@ -197,6 +206,7 @@ export class ComposerState {
 
   dispose() {
     this.cancelVoice();
+    this.unsubscribeDrafts?.();
   }
 }
 

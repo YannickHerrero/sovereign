@@ -72,15 +72,16 @@ pub struct PiAgent {
 
 #[async_trait]
 impl AgentProcess for PiAgent {
-    async fn prompt(&self, message: &str, images: &[ImageContent], queued: bool) -> Result<()> {
-        let command = if queued {
-            json!({ "type": "follow_up", "message": message, "images": images })
-        } else {
-            json!({ "type": "prompt", "message": message, "images": images })
-        };
+    async fn prompt(&self, message: &str, images: &[ImageContent]) -> Result<()> {
+        let command = json!({ "type": "prompt", "message": message, "images": images });
         // Rejections (bad streaming behavior, unknown session) come back at once; a slow answer
         // means an extension command is running and the prompt was accepted.
         self.process.command_within(command, std::time::Duration::from_secs(3)).await?;
+        Ok(())
+    }
+
+    async fn steer(&self, message: &str, images: &[ImageContent]) -> Result<()> {
+        self.process.command(json!({ "type": "steer", "message": message, "images": images })).await?;
         Ok(())
     }
 

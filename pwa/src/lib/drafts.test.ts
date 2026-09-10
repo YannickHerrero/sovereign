@@ -54,3 +54,27 @@ describe('drafts', () => {
     expect(filtered.get('empty')).toBe('');
   });
 });
+
+describe('drafts.push', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('delivers to a mounted composer instead of storage', async () => {
+    const drafts = await freshDrafts();
+    const received: string[] = [];
+    const unsubscribe = drafts.subscribe('ws/task', (text) => received.push(text));
+    drafts.push('ws/task', 'hello');
+    expect(received).toEqual(['hello']);
+    expect(drafts.get('ws/task')).toBe('');
+    unsubscribe();
+    drafts.push('ws/task', 'later');
+    expect(received).toEqual(['hello']);
+    expect(drafts.get('ws/task')).toBe('later');
+  });
+
+  it('appends to a stored draft when nobody listens', async () => {
+    const drafts = await freshDrafts();
+    drafts.set('ws/task', 'first ');
+    drafts.push('ws/task', 'second');
+    expect(drafts.get('ws/task')).toBe('first\n\nsecond');
+  });
+});

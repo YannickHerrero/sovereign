@@ -103,8 +103,10 @@ Parser qui suit la branche active : partir de la dernière entrée et remonter l
 | GET | `/tasks` | liste avec état, stats, pinned, updated_at |
 | POST | `/tasks` | `{ repo, message, images?, model?: { provider, id } }` : crée la tâche, lance pi, envoie le prompt. Titre provisoire = début du message, puis titre généré (voir ci-dessous). |
 | GET | `/tasks/:id` | détail : tours, état, modèle, branche |
-| POST | `/tasks/:id/prompt` | `{ message }` : follow-up. Si pi est en train de streamer, envoyé en `follow_up` (file d'attente). |
-| POST | `/tasks/:id/abort` | abort du run en cours |
+| POST | `/tasks/:id/prompt` | `{ message, images? }` : follow-up. Si un run est en cours, le serveur garde le message dans sa file (réponse `{ queued }`) et l'envoie en `prompt` au run suivant, un message par run. |
+| POST | `/tasks/:id/queue/:msg/steer` | envoie tout de suite un message en file à l'agent (`steer` pi, livré après les tool calls en cours). pi uniquement. |
+| DELETE | `/tasks/:id/queue/:msg` | retire un message de la file |
+| POST | `/tasks/:id/abort` | abort du run en cours ; vide la file et renvoie les messages abandonnés pour que le client les remette dans le brouillon |
 | PATCH | `/tasks/:id` | `{ pinned?, title? }` (title propagé via `set_session_name` si le process tourne, sinon au prochain lancement) |
 | DELETE | `/tasks/:id` | tue le process, retire la tâche, laisse le JSONL pi en place |
 | GET | `/tasks/:id/diff` | diff unifié du working tree du repo, limité aux `touched_files` de la tâche, plus numstat |
@@ -302,7 +304,8 @@ trait Backend {
 }
 
 trait AgentProcess {
-    async fn prompt(&self, message: &str, images: &[ImageContent], queued: bool) -> Result<()>;
+    async fn prompt(&self, message: &str, images: &[ImageContent]) -> Result<()>;
+    async fn steer(&self, message: &str, images: &[ImageContent]) -> Result<()>;
     async fn abort(&self) -> Result<()>;
     async fn set_model(&self, model: &ModelRef) -> Result<Model>;
     async fn set_name(&self, name: &str) -> Result<()>;

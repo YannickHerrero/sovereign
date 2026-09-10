@@ -51,6 +51,15 @@ pub enum Turn {
     },
 }
 
+/// A user message held by the server until the current run ends.
+#[derive(Debug, Clone, Serialize)]
+pub struct QueuedMessage {
+    pub id: String,
+    pub text: String,
+    pub images: Vec<ImageContent>,
+    pub at: u64,
+}
+
 /// A transcript read from a backend's session file.
 #[derive(Debug, Default)]
 pub struct Session {
@@ -108,8 +117,10 @@ pub enum RunSignal {
 /// A live agent process attached to one task.
 #[async_trait]
 pub trait AgentProcess: Send + Sync {
-    /// Sends a user message. `queued` means a run is in progress and the message must wait.
-    async fn prompt(&self, message: &str, images: &[ImageContent], queued: bool) -> Result<()>;
+    /// Sends a user message; the caller guarantees no run is in progress.
+    async fn prompt(&self, message: &str, images: &[ImageContent]) -> Result<()>;
+    /// Injects a message into the current run, before the agent's next model call.
+    async fn steer(&self, message: &str, images: &[ImageContent]) -> Result<()>;
     async fn abort(&self) -> Result<()>;
     async fn is_streaming(&self) -> Result<bool>;
     async fn list_models(&self) -> Result<ModelList>;
