@@ -24,6 +24,16 @@ export function seenLabel(online: boolean, lastSeen: number | undefined, now = D
   return `Last seen ${date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${time}`;
 }
 
+/** Local time today, day/month otherwise, with a two-digit year for older years. */
+export function messageTime(at: number, now = Date.now()): string {
+  const date = new Date(at);
+  const today = new Date(now);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  if (isSameDay(date, today)) return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const day = `${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
+  return date.getFullYear() === today.getFullYear() ? day : `${day}/${pad(date.getFullYear() % 100)}`;
+}
+
 export function isToday(at: number, now = Date.now()): boolean {
   return isSameDay(new Date(at), new Date(now));
 }

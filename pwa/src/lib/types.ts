@@ -15,6 +15,8 @@ export interface TaskSummary {
   minus: number;
   created_at: number;
   updated_at: number;
+  /** Absent on older servers. */
+  last_message_at?: number;
   /** The task finished a run the user has not opened since. */
   unread: boolean;
 }

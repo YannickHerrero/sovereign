@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Icon from '../../components/Icon.svelte';
+  import { messageTime } from '../../lib/format';
   import { router } from '../../lib/router.svelte';
   import { prefs } from '../../lib/prefs.svelte';
   import { dotVariant, groupTasks, isActive, type Filter } from '../../lib/tasks';
@@ -8,6 +10,12 @@
   let { store, filter, activeTaskId }: { store: WorkspaceStore; filter: Filter; activeTaskId: string | undefined } = $props();
 
   let query = $state('');
+  let now = $state(Date.now());
+
+  onMount(() => {
+    const timer = setInterval(() => { now = Date.now(); }, 1000);
+    return () => clearInterval(timer);
+  });
 
   const groups = $derived(groupTasks(prefs.grouping, store.tasks, query, filter));
   const byRepo = $derived(prefs.grouping === 'repo');
@@ -63,6 +71,7 @@
         <div class="group">{g.label}</div>
       {/if}
       {#each collapsed ? [] : g.items as t (t.id)}
+        {@const at = t.last_message_at ?? t.updated_at}
         <button class="row" class:active={t.id === activeTaskId} onclick={() => router.go({ name: 'chat', wsId: store.server.id, taskId: t.id })}>
           <div class="dotcol">
             <span class="dot dot--{dotVariant(t)}"></span>
@@ -74,11 +83,8 @@
               {#if t.agent === 'claude'}
                 <span class="agent-tag">Claude</span>
               {/if}
-              {#if t.plus + t.minus > 0}
-                <span class="sep">·</span>
-                <span class="plus">+{t.plus}</span>
-                <span class="minus">-{t.minus}</span>
-              {/if}
+              <span class="sep">·</span>
+              <time datetime={new Date(at).toISOString()} title={new Date(at).toLocaleString()}>{messageTime(at, now)}</time>
             </div>
           </div>
         </button>

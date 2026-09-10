@@ -89,6 +89,7 @@ pub async fn create(
         pinned: false,
         created_at: now,
         updated_at: now,
+        last_message_at: Some(now),
         seen_at: now,
         last_status: None,
         running: false,

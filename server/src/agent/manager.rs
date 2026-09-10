@@ -169,6 +169,14 @@ impl Agents {
         let _ = self.events.send(ServerEvent::TaskUpsert { task: self.summary(task) });
     }
 
+    fn record_message(&self, task_id: &str, at: u64) {
+        if let Ok(Some(task)) = self.store.update(task_id, |t| {
+            t.last_message_at = Some(t.last_message_at.unwrap_or(t.updated_at).max(at));
+        }) {
+            self.broadcast_task(&task);
+        }
+    }
+
     pub fn broadcast_removed(&self, id: &str) {
         let _ = self.events.send(ServerEvent::TaskRemoved { id: id.to_string() });
     }
@@ -196,7 +204,9 @@ impl Agents {
     pub async fn prompt(self: &Arc<Self>, task: &Task, message: &str, images: &[ImageContent]) -> Result<()> {
         let process = self.ensure_agent(task).await?;
         let queued = self.is_working(&task.id);
+        let at = crate::store::now_ms();
         process.prompt(message, images, queued).await?;
+        self.record_message(&task.id, at);
         self.touch(&task.id);
         Ok(())
     }
@@ -335,6 +345,7 @@ impl Agents {
                 }
             }
             RunSignal::AssistantMessage { text, at, status, error } => {
+                self.record_message(task_id, if at > 0 { at } else { crate::store::now_ms() });
                 {
                     let mut runs = self.runs.lock().unwrap();
                     let acc = runs.entry(task_id.to_string()).or_default();

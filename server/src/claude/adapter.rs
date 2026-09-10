@@ -457,6 +457,7 @@ mod tests {
             pinned: false,
             created_at: 0,
             updated_at: 0,
+            last_message_at: None,
             seen_at: 0,
             last_status: None,
             running: false,

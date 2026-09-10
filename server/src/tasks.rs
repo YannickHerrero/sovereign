@@ -29,6 +29,7 @@ pub struct TaskSummary {
     pub minus: u32,
     pub created_at: u64,
     pub updated_at: u64,
+    pub last_message_at: u64,
     /// The task finished a run the user has not opened since.
     pub unread: bool,
 }
@@ -58,6 +59,7 @@ pub fn summarize(task: &Task, working: bool, blocked: bool) -> TaskSummary {
         minus,
         created_at: task.created_at,
         updated_at: task.updated_at,
+        last_message_at: task.last_message_at.unwrap_or(task.updated_at),
         unread: task.updated_at > task.seen_at,
     }
 }
@@ -90,6 +92,7 @@ mod tests {
             pinned: false,
             created_at: 0,
             updated_at: 10,
+            last_message_at: None,
             seen_at: 0,
             last_status,
             running: false,
@@ -107,6 +110,19 @@ mod tests {
         assert_eq!(summarize(&task(Some(RunStatus::Settled), false), false, false).state, TaskState::NoChanges);
         assert_eq!(summarize(&task(Some(RunStatus::Aborted), true), false, false).state, TaskState::Failed);
         assert_eq!(summarize(&task(None, false), false, false).state, TaskState::Pending);
+    }
+
+    #[test]
+    fn message_time_is_independent_of_task_updates_and_supports_old_metadata() {
+        let mut t = task(None, false);
+        let mut old = serde_json::to_value(&t).unwrap();
+        old.as_object_mut().unwrap().remove("last_message_at");
+        let restored: Task = serde_json::from_value(old).unwrap();
+        assert_eq!(summarize(&restored, false, false).last_message_at, 10);
+        t.last_message_at = Some(20);
+        t.updated_at = 30;
+        assert_eq!(summarize(&t, false, false).last_message_at, 20);
+        assert_eq!(summarize(&t, false, false).updated_at, 30);
     }
 
     #[test]
