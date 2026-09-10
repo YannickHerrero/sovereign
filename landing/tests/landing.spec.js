@@ -16,6 +16,15 @@ test("renders the product, valid local links and no horizontal overflow", async 
     "Vos agents au travail.",
   );
   await expect(page.getByRole("main")).toHaveCount(1);
+  for (const link of [
+    page.getByRole("link", { name: "Voir sur GitHub" }),
+    page.getByRole("contentinfo").getByRole("link", { name: "GitHub" }),
+  ]) {
+    await expect(link).toHaveAttribute(
+      "href",
+      "https://github.com/YannickHerrero/sovereign",
+    );
+  }
   await expect(
     page.getByRole("link", { name: "Installer Sovereign" }).first(),
   ).toHaveAttribute("href", "#installation");
