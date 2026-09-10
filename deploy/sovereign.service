@@ -2,7 +2,7 @@
 # then: systemctl --user daemon-reload && systemctl --user enable --now sovereign
 # For a headless machine also run: loginctl enable-linger $USER
 [Unit]
-Description=Sovereign server (pi remote console)
+Description=Sovereign server (remote coding agent console)
 After=network-online.target
 
 [Service]
@@ -10,7 +10,8 @@ ExecStart=%h/.cargo/bin/sovereign-server
 Restart=on-failure
 RestartSec=3
 Environment=RUST_LOG=info
-# pi is installed through mise/npm: make sure it is on PATH for the service.
+# Make sure the installed harness binaries are on PATH for the service.
+# Adapt this example PATH to the installation method used on this machine.
 Environment=PATH=%h/.local/share/mise/shims:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 
 [Install]

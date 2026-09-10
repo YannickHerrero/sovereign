@@ -12,7 +12,7 @@ export class WorkspaceStore {
   error = $state<string | null>(null);
 
   private listeners = new Set<RunListener>();
-  /** First prompt of tasks created from this client, shown until pi has persisted it. */
+  /** First prompt of tasks created from this client, shown until the harness has persisted it. */
   private firstPrompts = new Map<string, { text: string; images: ImageContent[] }>();
   private disconnect: (() => void) | null = null;
   private refCount = 0;

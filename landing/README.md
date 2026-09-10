@@ -65,6 +65,8 @@ Aucune variable d’environnement, aucun backend, aucun compte utilisateur ni ou
 
 ## Contenu et visuels
 
+Présenter Sovereign comme une console indépendante du harness. Distinguer le support **disponible** (pi et Claude Code) des intégrations **prévues, non disponibles** (Codex et OpenCode). Les noms d’outils dans les captures et les explications techniques décrivent une intégration précise, pas une restriction du produit à cet outil.
+
 - `index.html` : texte français, métadonnées, liens vers le dépôt et exemples produit. Les aperçus sont de vraies captures de la PWA avec des données fictives, pas une console connectée.
 - `src/style.css` : mise en page responsive et styles.
 - `src/main.js` : onglets accessibles au clavier (flèches, Début, Fin) et copie des commandes avec message de repli.

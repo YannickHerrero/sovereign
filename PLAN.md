@@ -1,16 +1,25 @@
-# Sovereign : plan v1
+# Sovereign : architecture et historique
 
-Console mobile pour piloter des sessions pi à distance. Deux parties dans ce monorepo :
+Console auto-hébergée, mobile et desktop, pour piloter des agents de développement à distance, indépendamment du harness utilisé.
 
-- `server/` : binaire Rust, un par machine. Gère les sessions pi, expose une API HTTP + WebSocket, sert la PWA.
-- `pwa/` : interface mobile, design repris à l'identique de la maquette "Remote coding agent console".
+- `server/` : binaire Rust, un par machine. Gère les tâches et les sessions via les adaptateurs de harness, expose une API HTTP + WebSocket, sert la PWA.
+- `pwa/` : interface mobile et desktop commune aux harness pris en charge.
+- `landing/` : site de présentation du produit, déployé séparément.
 
-## 1. Décisions prises
+## Positionnement et support actuels
+
+Sovereign est **harness-agnostic**, mais chaque outil nécessite une intégration explicite. **pi et Claude Code sont pris en charge aujourd’hui**. Codex et OpenCode sont des intégrations prévues, pas encore disponibles.
+
+Le contrat commun `Backend` / `AgentProcess` est défini dans [`server/src/agent/mod.rs`](server/src/agent/mod.rs). Les adaptateurs actuels vivent dans `server/src/pi/` et `server/src/claude/`. Ils normalisent les protocoles et les transcripts, tout en conservant les particularités de chaque outil (modèles, permissions, stockage des sessions).
+
+**Lecture de ce document :** les sections numérotées ci-dessous sont l’historique des plans de développement, pas une spécification à jour. Les sections 1 à 7 décrivent notamment la v1 initiale, limitée à pi ; la section 8 introduit Claude Code. Les références techniques propres à pi y sont conservées pour expliquer cette première implémentation. Le [README](README.md) décrit l’utilisation et le support actuels.
+
+## 1. Décisions prises pour la v1 initiale (historique)
 
 | Sujet | Décision |
 |---|---|
 | Topologie | Un serveur par machine. La PWA garde la liste des serveurs (nom, URL, token) en local. |
-| Agent | pi uniquement, piloté via `pi --mode rpc` (JSON lines sur stdin/stdout), un process par tâche. |
+| Agent | V1 initiale : pi uniquement, piloté via `pi --mode rpc` (JSON lines sur stdin/stdout), un process par tâche. |
 | Tâche | Une session pi dont le cwd est un dossier de `~/dev`. Pas de branche dédiée. |
 | Diff | Stats `+n -m` et diff complet via git sur le working tree du repo. "View PR" devient "View diff". |
 | Réseau | Tailscale. HTTPS via `tailscale serve`. Auth par token statique (Bearer). |

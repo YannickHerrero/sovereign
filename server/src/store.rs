@@ -30,7 +30,7 @@ pub struct Task {
     #[serde(default)]
     pub running: bool,
     /// Repo state before the task's first run. Files touched by the task are measured from it,
-    /// so pi's own commits are included.
+    /// so the agent's own commits are included.
     pub baseline: Option<Baseline>,
     pub touched_files: Vec<TouchedFile>,
 }

@@ -1,6 +1,6 @@
 //! Working-tree change tracking. A run's touched files are the difference between two
 //! snapshots taken before and after it. Both count changes since the *pre-run* HEAD, so work
-//! that pi commits during the run is still attributed to it.
+//! that the agent commits during the run is still attributed to it.
 
 use std::collections::BTreeMap;
 use std::path::Path;

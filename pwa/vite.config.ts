@@ -11,7 +11,7 @@ export default defineConfig({
       manifest: {
         name: 'Sovereign',
         short_name: 'Sovereign',
-        description: 'Remote console for pi coding agents',
+        description: 'Self-hosted, harness-agnostic console for remote coding agents',
         theme_color: '#f7f6f3',
         background_color: '#f7f6f3',
         display: 'standalone',

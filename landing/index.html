@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#173e42" />
     <meta
       name="description"
-      content="Vos agents codent sur vos machines. Pilotez pi et Claude Code depuis votre téléphone avec Sovereign, votre console de développement auto-hébergée."
+      content="Pilotez vos agents de développement sur vos machines depuis votre téléphone ou votre bureau. Sovereign, la console auto-hébergée indépendante du harness. Aujourd’hui compatible avec pi et Claude Code."
     />
     <meta
       property="og:title"
@@ -14,7 +14,7 @@
     />
     <meta
       property="og:description"
-      content="La console mobile pour piloter pi et Claude Code sur vos propres machines."
+      content="La console auto-hébergée, mobile et desktop, pour vos agents de développement. Indépendante du harness, compatible aujourd’hui avec pi et Claude Code."
     />
     <meta property="og:type" content="website" />
     <title>Sovereign — Vos agents au travail. Vous, où vous voulez.</title>
@@ -65,7 +65,7 @@
             >
           </div>
           <div class="compatibility">
-            <span>Vos outils, déjà chez vous</span
+            <span>Disponibles aujourd’hui</span
             ><strong><span aria-hidden="true">π</span> pi</strong
             ><strong
               ><span class="claude-symbol" aria-hidden="true">✳</span> Claude
@@ -100,7 +100,7 @@
         <div class="container foundation-inner">
           <span>Moins de terminal.<br /><strong>Plus de liberté.</strong></span
           ><span>Auto-hébergé</span><span>Multi-machines</span
-          ><span>Mobile & desktop</span><span>pi + Claude Code</span>
+          ><span>Mobile & desktop</span><span>Harness-agnostic</span>
         </div>
       </div>
       <section
@@ -117,7 +117,8 @@
           </div>
           <p>
             Votre environnement de développement reste là où il est. Sovereign
-            vous donne simplement la liberté de le piloter autrement.
+            vous donne la liberté de le piloter autrement, avec une interface
+            commune indépendante du harness.
           </p>
         </div>
         <div
@@ -168,7 +169,7 @@
             <ul>
               <li>Une PWA à ajouter à votre écran d’accueil</li>
               <li>Du texte, des images ou la dictée vocale</li>
-              <li>Vos sessions pi accessibles aussi au terminal</li>
+              <li>Vos sessions conservées dans vos outils</li>
             </ul>
             <a class="text-link" href="#installation"
               >Emportez votre workspace <span aria-hidden="true">↗</span></a
@@ -331,8 +332,9 @@
               <div>
                 <h3>Préparez votre machine</h3>
                 <p>
-                  pi ou Claude Code installé et authentifié, Rust, Node.js, pnpm
-                  et Tailscale. Tout part de votre environnement.
+                  Un harness compatible installé et authentifié — pi ou Claude
+                  Code aujourd’hui —, Rust, Node.js, pnpm et Tailscale. Tout
+                  part de votre environnement.
                 </p>
               </div>
             </article>
@@ -400,10 +402,13 @@ sovereign-server</code></pre>
           <details>
             <summary>Quels agents puis-je utiliser ?</summary>
             <p>
-              Sovereign prend en charge pi et Claude Code. Le serveur détecte
-              les outils installés au démarrage. Choisissez l’agent via le
-              modèle lors de la création d’une tâche ; cet agent reste ensuite
-              associé à la tâche.
+              Sovereign est indépendant du harness, l’outil qui exécute votre
+              agent. Aujourd’hui, pi et Claude Code sont pris en charge ; un
+              seul des deux suffit. Codex et OpenCode sont prévus, mais pas
+              encore disponibles. Chaque intégration nécessite un adaptateur. Le
+              serveur détecte les outils compatibles installés au démarrage.
+              Choisissez le harness via le modèle lors de la création d’une
+              tâche ; il reste ensuite associé à cette tâche.
             </p>
           </details>
           <details>

@@ -55,7 +55,7 @@ pub fn summarize(task: &Task, working: bool) -> TaskSummary {
     }
 }
 
-/// Provisional title until pi generates one: the first line of the prompt, truncated.
+/// Provisional title until the task's harness generates one: the first line of the prompt, truncated.
 pub fn provisional_title(message: &str) -> String {
     const MAX: usize = 60;
     let line = message.lines().find(|l| !l.trim().is_empty()).unwrap_or("").trim();
