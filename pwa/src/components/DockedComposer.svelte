@@ -19,6 +19,8 @@
     repos?: Repo[];
     onRepoChange?: (name: string) => void;
     onSubmit: SubmitHandler;
+    /** Persists unsent text across navigation under this id (see `drafts`). */
+    draftKey?: string;
     /** Route keystrokes and pastes made outside any field into this composer. */
     captureTyping?: boolean;
     /** Page-level overlays (menu, diff) that must keep stray keystrokes for themselves. */
@@ -30,10 +32,12 @@
 
   let {
     placeholder, repo, branch = null, model = null, agent = null, loadModels, onModelChange, modelDisabled = false,
-    repos, onRepoChange, onSubmit, autofocus = false, captureTyping = false, typingBlocked = () => false, wide = false,
+    repos, onRepoChange, onSubmit, draftKey, autofocus = false, captureTyping = false, typingBlocked = () => false, wide = false,
   }: Props = $props();
 
-  const c = new ComposerState();
+  // Prop read once on purpose: the parent keys the composer by task, so the id never changes.
+  // svelte-ignore state_referenced_locally
+  const c = new ComposerState(draftKey);
   let modelBusy = $state(false);
   let imageInput: HTMLInputElement;
   let textarea = $state<HTMLTextAreaElement | null>(null);

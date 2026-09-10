@@ -83,6 +83,7 @@
     branch={session.detail?.branch}
     model={session.detail?.model}
     agent={summary?.agent}
+    draftKey="{store.server.id}/{taskId}"
     captureTyping
     typingBlocked={() => menuOpen || session.diffOpen}
     loadModels={() => session.models()}

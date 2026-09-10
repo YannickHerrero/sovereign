@@ -1,4 +1,5 @@
 import { api, connectEvents } from './api';
+import { drafts } from './drafts';
 import { settings, type Server } from './settings.svelte';
 import type { ImageContent, RunEvent, ServerEvent, TaskSummary } from './types';
 
@@ -71,6 +72,7 @@ export class WorkspaceStore {
 
   remove(id: string) {
     this.tasks = this.tasks.filter((t) => t.id !== id);
+    drafts.clear(`${this.server.id}/${id}`);
   }
 
   private connect() {

@@ -1,3 +1,4 @@
+import { drafts } from './drafts';
 import { settings } from './settings.svelte';
 import type { ImageContent } from './types';
 import { VoiceSession, voiceAvailable } from './voice';
@@ -9,7 +10,7 @@ export type SubmitHandler = (text: string, images: ImageContent[]) => Promise<vo
 
 /** Draft, attachment and dictation state shared by the mobile sheet and the desktop composer. */
 export class ComposerState {
-  draft = $state('');
+  #draft = $state('');
   sending = $state(false);
   image = $state<ImageContent | null>(null);
   imageLoading = $state(false);
@@ -21,6 +22,20 @@ export class ComposerState {
 
   private voice: VoiceSession | null = null;
   private ticker: ReturnType<typeof setInterval> | undefined;
+
+  /** @param draftKey when given, the text is restored from and saved to `drafts` under this id. */
+  constructor(private readonly draftKey?: string) {
+    if (draftKey) this.#draft = drafts.get(draftKey);
+  }
+
+  get draft(): string {
+    return this.#draft;
+  }
+
+  set draft(value: string) {
+    this.#draft = value;
+    if (this.draftKey) drafts.set(this.draftKey, value);
+  }
 
   get hasDraft(): boolean {
     return this.draft.trim().length > 0 || this.image !== null;

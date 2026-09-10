@@ -20,6 +20,8 @@
     repos?: Repo[];
     onRepoChange?: (name: string) => void;
     onSubmit: SubmitHandler;
+    /** Persists unsent text across navigation under this id (see `drafts`). */
+    draftKey?: string;
     /** Route keystrokes and pastes made outside any field into this composer. */
     captureTyping?: boolean;
     /** Page-level overlays (menu, diff) that must keep stray keystrokes for themselves. */
@@ -29,10 +31,12 @@
 
   let {
     placeholder, repo, branch = null, model = null, agent = null, loadModels, onModelChange, modelDisabled = false,
-    repos, onRepoChange, onSubmit, open = $bindable(false), captureTyping = false, typingBlocked = () => false,
+    repos, onRepoChange, onSubmit, draftKey, open = $bindable(false), captureTyping = false, typingBlocked = () => false,
   }: Props = $props();
 
-  const c = new ComposerState();
+  // Prop read once on purpose: the parent keys the composer by task, so the id never changes.
+  // svelte-ignore state_referenced_locally
+  const c = new ComposerState(draftKey);
   let modelBusy = $state(false);
   let imageInput: HTMLInputElement;
   let textarea = $state<HTMLTextAreaElement | null>(null);
@@ -131,7 +135,7 @@
       <button class="round round--filled" aria-label="New" onclick={start}>
         <Icon name="plus" color="var(--ink-control)" />
       </button>
-      <button class="ghost" onclick={start}>{placeholder}</button>
+      <button class="ghost" class:draft={c.hasDraft} onclick={start}>{c.draft.trim() || placeholder}</button>
       <button class="round" aria-label="Voice" onclick={mic}>
         <Icon name="mic" color="var(--ink-control)" />
       </button>
@@ -252,6 +256,12 @@
     color: var(--muted-3);
     padding: 2px 0;
     cursor: text;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ghost.draft {
+    color: var(--ink);
   }
   .overlay {
     position: absolute;
