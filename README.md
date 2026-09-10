@@ -1,6 +1,8 @@
 # Sovereign
 
-Console mobile pour piloter des sessions [pi](https://github.com/badlogic/pi-mono) à distance.
+Console auto-hébergée, mobile et desktop, pour piloter vos agents de développement à distance, sur vos propres machines.
+
+Sovereign est **harness-agnostic** : la console n’est pas liée à un outil d’exécution d’agent particulier. Elle réunit vos tâches, conversations et diffs dans une même interface, avec un adaptateur pour chaque harness pris en charge.
 
 **[Découvrir Sovereign — site de présentation](https://sovereign-landing-chi.vercel.app)**
 
@@ -8,15 +10,28 @@ Console mobile pour piloter des sessions [pi](https://github.com/badlogic/pi-mon
 
 *Capture de la vraie PWA réalisée avec Playwright, avec des données et des machines fictives.*
 
-- `server/` : serveur Rust, un par machine. Gère les sessions pi, expose une API HTTP + WebSocket, sert la PWA.
-- `pwa/` : interface mobile (Svelte 5, Vite), embarquée dans le binaire du serveur.
+## Harness pris en charge
+
+| Harness | Statut |
+|---|---|
+| [pi](https://github.com/badlogic/pi-mono) | Disponible |
+| [Claude Code](https://code.claude.com/docs/) | Disponible |
+| Codex | Prévu — pas encore pris en charge |
+| OpenCode | Prévu — pas encore pris en charge |
+
+Un seul des harness disponibles suffit pour utiliser Sovereign. Chaque nouvelle intégration nécessite un adaptateur ; une CLI arbitraire ne peut pas encore être ajoutée par simple configuration. Les capacités (modèles, permissions, reprise de session) dépendent du harness choisi.
+
+## Structure du repo
+
+- `server/` : serveur Rust, un par machine. Gère les tâches et les sessions via les adaptateurs de harness, expose une API HTTP + WebSocket, sert la PWA.
+- `pwa/` : interface mobile et desktop (Svelte 5, Vite), embarquée dans le binaire du serveur.
 - `landing/` : site de présentation du produit (HTML/CSS/JS, Vite), déployable indépendamment. Voir [son README](landing/README.md).
 
 Voir [PLAN.md](PLAN.md) pour l'architecture et les phases.
 
 ## Prérequis sur chaque machine
 
-- `pi` installé et authentifié (`pi` fonctionne dans un terminal), ou Claude Code connecté (`claude` fonctionne dans un terminal). Le serveur détecte les deux au démarrage et n'en exige qu'un.
+- Au moins un harness pris en charge installé et authentifié : **pi** (`pi` fonctionne dans un terminal) ou **Claude Code** (`claude` fonctionne dans un terminal). Le serveur détecte les outils disponibles au démarrage ; pi n’est pas requis si Claude Code est installé.
 - Rust (cargo) pour compiler le serveur, Node + pnpm pour compiler la PWA.
 - Tailscale pour l'accès depuis le téléphone.
 
@@ -43,7 +58,7 @@ listen = "127.0.0.1:7777"
 token = "..."             # à saisir dans la PWA
 repos_root = "~/dev"      # chaque sous-dossier est un repo proposé à la création d'une tâche
 pi_bin = "pi"
-idle_kill_secs = 600      # arrêt d'un process pi inactif
+idle_kill_secs = 600      # arrêt d’un process d’agent inactif
 
 [claude]
 bin = "claude"
@@ -55,7 +70,12 @@ Claude Code tourne toujours en mode `bypassPermissions`, sans aucune demande de 
 
 Le serveur refuse de démarrer si le token configuré est vide ou ne contient que des espaces. Conserver le token généré ou le remplacer par un secret fort ; ne pas utiliser la valeur d’exemple `"..."`.
 
-Les tâches sont enregistrées dans `~/.local/share/sovereign/tasks.json`. Les sessions restent dans le dossier de pi (`~/.pi/agent/sessions/`), donc visibles aussi avec `pi -r` dans le repo.
+Les tâches Sovereign sont enregistrées dans `~/.local/share/sovereign/tasks.json`. Les sessions restent dans le stockage natif du harness :
+
+- **pi** : `~/.pi/agent/sessions/`, également accessibles avec `pi -r` dans le repo.
+- **Claude Code** : `~/.claude/projects/`, également accessibles avec les commandes de reprise de Claude Code.
+
+Supprimer une tâche dans Sovereign ne supprime pas le fichier de session du harness.
 
 ## Lancer au démarrage
 
@@ -85,15 +105,18 @@ L'URL à saisir dans la PWA est alors `https://<machine>.<tailnet>.ts.net`.
 2. Settings : ajouter chaque machine (nom, URL, token). La PWA ouverte depuis une machine peut piloter les autres.
 3. Settings : coller une clé API OpenAI pour la dictée (transcription temps réel, la clé reste dans le navigateur).
 4. Workspaces : choisir une machine, puis "Plan, ask, build…" pour lancer une tâche dans un repo.
-5. Dans la bulle de composition, « + » permet de joindre une image (JPEG, PNG, WebP ou GIF, 5 Mio maximum), avec ou sans texte. L’aperçu peut être retiré avant l’envoi. Le modèle pi choisi doit accepter les images.
+5. Dans la bulle de composition, « + » permet de joindre une image (JPEG, PNG, WebP ou GIF, 5 Mio maximum), avec ou sans texte. L’aperçu peut être retiré avant l’envoi. Le harness et le modèle choisis doivent accepter les images.
 
-### Choisir le modèle
+### Choisir le harness et le modèle
 
-Dans le composer mobile ou desktop, cliquer sur le nom du modèle (ou « Pi default ») et sa flèche pour ouvrir la liste fournie par pi sur la machine choisie. La recherche filtre par nom, identifiant ou fournisseur ; « Images » indique les modèles compatibles avec les pièces jointes.
+Dans le composer mobile ou desktop, cliquer sur le sélecteur de modèle pour ouvrir les options disponibles sur la machine choisie. Chaque modèle est associé à un harness ; la recherche filtre par nom, identifiant ou fournisseur. « Images » indique les modèles compatibles avec les pièces jointes.
 
-Pour une nouvelle tâche, le choix est appliqué avant le premier message. Dans une discussion existante, il change réellement le modèle de la session et reste enregistré dans l’historique pi. Attendre la fin de l’exécution ou arrêter l’agent avant de changer de modèle. Les erreurs d’authentification restent affichées dans le sélecteur sans remplacer le modèle courant.
+Pour une nouvelle tâche, choisir le modèle sélectionne aussi le harness avant le premier message. Dans une discussion existante, seul le modèle du harness déjà associé à la tâche peut changer : Sovereign ne transfère pas une session d’un outil à l’autre. Attendre la fin de l’exécution ou arrêter l’agent avant de changer de modèle. Les erreurs d’authentification restent affichées dans le sélecteur sans remplacer le modèle courant.
 
-Comme le sélecteur natif de pi, la commande `set_model` met aussi à jour son modèle par défaut pour les futures sessions sur cette machine.
+Les intégrations actuelles ont chacune leurs particularités :
+
+- **pi** : modèles issus de son registre authentifié. Sa commande `set_model` met aussi à jour son modèle par défaut pour les futures sessions sur cette machine.
+- **Claude Code** : modèles déclarés dans `[claude].models` ; le changement est transmis au processus Claude Code de la session.
 
 ## Sur grand écran
 
