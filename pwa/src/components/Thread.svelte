@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import type { ChatSession } from '../lib/chat.svelte';
-  import { blocks } from '../lib/markdown';
+  import Markdown from './Markdown.svelte';
   import RequestCard from './RequestCard.svelte';
 
   /** `variant` only changes spacing and type sizes; the structure is shared. */
@@ -35,21 +35,7 @@
       {:else}
         <div class="agent">
           <div class="meta">{session.metaLabel(turn)}</div>
-          {#each blocks(turn.text) as block}
-            {#if block.kind === 'heading'}
-              <div class="heading">{@html block.html}</div>
-            {:else if block.kind === 'paragraph'}
-              <p>{@html block.html}</p>
-            {:else if block.kind === 'list'}
-              <ul>
-                {#each block.items ?? [] as item}
-                  <li>{@html item}</li>
-                {/each}
-              </ul>
-            {:else}
-              <pre>{@html block.html}</pre>
-            {/if}
-          {/each}
+          <Markdown text={turn.text} {variant} />
           {#if turn.status === 'error' && !turn.text}
             <p class="failed">The agent stopped with an error.</p>
           {/if}
@@ -79,21 +65,7 @@
     {#if session.live}
       <div class="agent">
         {#if session.live.text}
-          {#each blocks(session.live.text) as block}
-            {#if block.kind === 'paragraph'}
-              <p>{@html block.html}</p>
-            {:else if block.kind === 'heading'}
-              <div class="heading">{@html block.html}</div>
-            {:else if block.kind === 'list'}
-              <ul>
-                {#each block.items ?? [] as item}
-                  <li>{@html item}</li>
-                {/each}
-              </ul>
-            {:else}
-              <pre>{@html block.html}</pre>
-            {/if}
-          {/each}
+          <Markdown text={session.live.text} {variant} />
         {/if}
         <div class="working">
           <span class="dot dot--pulse"></span>
@@ -116,6 +88,9 @@
 </div>
 
 <style>
+  .thread {
+    min-width: 0;
+  }
   .thread.mobile {
     padding: 14px 20px calc(var(--safe-bottom) + 130px);
   }
@@ -160,6 +135,7 @@
     animation-duration: 0.2s;
   }
   .agent {
+    min-width: 0;
     animation: fadeUp 0.24s ease both;
   }
   .meta {
@@ -169,49 +145,6 @@
   }
   .desktop .meta {
     font-size: 12px;
-  }
-  .heading {
-    font-size: 15.5px;
-    font-weight: 600;
-    color: var(--ink-strong);
-    letter-spacing: -0.2px;
-    margin-bottom: 6px;
-  }
-  .desktop .heading {
-    font-size: 15px;
-  }
-  .agent p,
-  .agent ul {
-    margin: 0 0 11px;
-    font-size: 14.5px;
-    line-height: 1.5;
-    color: var(--ink-body);
-  }
-  .desktop .agent p,
-  .desktop .agent ul {
-    margin-bottom: 10px;
-    font-size: 14px;
-    line-height: 1.55;
-  }
-  .agent ul {
-    padding-left: 20px;
-  }
-  .agent :global(code) {
-    font-family: var(--mono);
-    font-size: 12.5px;
-    background: var(--press);
-    padding: 1px 5px;
-    border-radius: 5px;
-  }
-  .agent pre {
-    margin: 0 0 11px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: var(--press);
-    font-family: var(--mono);
-    font-size: 11.5px;
-    line-height: 1.5;
-    overflow-x: auto;
   }
   .failed {
     color: var(--red);

@@ -1,69 +1,52 @@
-/**
- * Minimal, safe markdown for agent replies: paragraphs, headings, bullet lists, fenced code,
- * inline code, bold, and auto-linked URLs. Everything is HTML-escaped first.
- */
-
-export interface Block {
-  kind: 'heading' | 'paragraph' | 'list' | 'code';
-  html: string;
-  items?: string[];
-}
+import DOMPurify from 'dompurify';
+import { Marked, Renderer } from 'marked';
 
 function escape(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const URL_RE = /\b((?:https?:\/\/|localhost:)[^\s<)]+[^\s<).,;:!?])/g;
+const markdown = new Marked({
+  gfm: true,
+  breaks: false,
+  renderer: {
+    // Agent output is not trusted HTML. Show it literally, including during streaming.
+    html: ({ text }) => escape(text),
+    // Don't fetch remote images/tracking pixels automatically; keep their alt text.
+    image: ({ text }) => escape(text),
+    table(token) {
+      return `<div class="table-scroll" role="region" aria-label="Table" tabindex="0">${Renderer.prototype.table.call(this, token)}</div>`;
+    },
+  },
+});
 
-export function inline(text: string): string {
-  let html = escape(text);
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(URL_RE, (url) => {
-    const href = url.startsWith('http') ? url : `http://${url}`;
-    return `<a href="${href}" target="_blank" rel="noopener">${url}</a>`;
+/** The only HTML boundary for agent replies, both live and persisted. */
+export function renderMarkdown(text: string): string {
+  const fragment = DOMPurify.sanitize(markdown.parse(text, { async: false }), {
+    ALLOWED_TAGS: [
+      'p', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'del',
+      'ul', 'ol', 'li', 'blockquote', 'hr', 'pre', 'code', 'a',
+      'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'input',
+    ],
+    ALLOWED_ATTR: [
+      'href', 'title', 'class', 'align', 'start', 'type', 'checked', 'disabled',
+      'role', 'aria-label', 'tabindex',
+    ],
+    ALLOW_DATA_ATTR: false,
+    RETURN_DOM_FRAGMENT: true,
   });
-  return html;
-}
 
-export function blocks(text: string): Block[] {
-  const out: Block[] = [];
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    if (line.trim() === '') {
-      i++;
+  for (const link of fragment.querySelectorAll('a')) {
+    const href = link.getAttribute('href');
+    // Also reject relative/file links: they cannot resolve against an agent's repo here.
+    if (!href || !/^(https?:\/\/|mailto:)/i.test(href)) {
+      link.removeAttribute('href');
       continue;
     }
-    if (line.startsWith('```')) {
-      const code: string[] = [];
-      i++;
-      while (i < lines.length && !lines[i].startsWith('```')) code.push(lines[i++]);
-      i++;
-      out.push({ kind: 'code', html: escape(code.join('\n')) });
-      continue;
-    }
-    const heading = /^#{1,6}\s+(.*)$/.exec(line);
-    if (heading) {
-      out.push({ kind: 'heading', html: inline(heading[1]) });
-      i++;
-      continue;
-    }
-    if (/^\s*[-*]\s+/.test(line)) {
-      const items: string[] = [];
-      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
-        items.push(inline(lines[i].replace(/^\s*[-*]\s+/, '')));
-        i++;
-      }
-      out.push({ kind: 'list', html: '', items });
-      continue;
-    }
-    const para: string[] = [];
-    while (i < lines.length && lines[i].trim() !== '' && !lines[i].startsWith('```') && !/^#{1,6}\s/.test(lines[i]) && !/^\s*[-*]\s+/.test(lines[i])) {
-      para.push(lines[i++]);
-    }
-    out.push({ kind: 'paragraph', html: inline(para.join(' ')) });
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
   }
-  return out;
+
+  const container = document.createElement('div');
+  container.append(fragment);
+  return container.innerHTML;
 }
