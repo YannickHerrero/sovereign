@@ -1,5 +1,5 @@
+pub mod adapter;
 pub mod image;
-pub mod manager;
 pub mod models;
 pub mod process;
 pub mod session;
