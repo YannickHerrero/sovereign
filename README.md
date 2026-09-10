@@ -29,8 +29,10 @@ cargo install --path .
 
 Premier lancement : `sovereign-server` crée `~/.config/sovereign/config.toml` avec un token aléatoire. Sur Unix, le fichier est créé avec les permissions `0600` (lecture/écriture réservées au propriétaire) ; ces permissions sont aussi appliquées aux configurations existantes à chaque démarrage.
 
+Les exemples de configuration, les données de test et les captures utilisent des noms de machines, projets et adresses fictifs. Ne pas y inclure d’identifiants d’une infrastructure personnelle.
+
 ```toml
-name = "wsl odk"          # nom affiché dans l'écran Workspaces
+name = "dev-machine"      # nom d’exemple affiché dans Workspaces
 listen = "127.0.0.1:7777"
 token = "..."             # à saisir dans la PWA
 repos_root = "~/dev"      # chaque sous-dossier est un repo proposé à la création d'une tâche

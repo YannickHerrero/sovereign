@@ -17,7 +17,7 @@ async function capture(page: Page, name: string, region?: Locator) {
 test('capture the real desktop conversation and diff', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 760 });
   const unexpected = await mockProduct(page);
-  await page.goto('/w/macbook/t/dark-mode');
+  await page.goto('/w/dev-machine/t/dark-mode');
   await expect(page.locator('.markdown')).toContainText('8 tests passent');
   await expect(page.locator('.sidebar')).toContainText('Offline');
   await page.getByRole('radio', { name: 'Project', exact: true }).click();
@@ -36,7 +36,7 @@ test('capture the real desktop conversation and diff', async ({ page }) => {
 test('capture the real mobile conversation and workspace list', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 780 });
   const unexpected = await mockProduct(page);
-  await page.goto('/w/macbook/t/dark-mode');
+  await page.goto('/w/dev-machine/t/dark-mode');
   await expect(page.locator('.markdown')).toContainText('8 tests passent');
   await capture(page, 'mobile-conversation');
 

@@ -83,8 +83,8 @@
 
     <div class="section">Add a machine</div>
     <div class="card form">
-      <input class="field" placeholder="Name (e.g. wsl odk)" bind:value={name} autocapitalize="off" />
-      <input class="field" placeholder="URL (e.g. https://odk.tailnet.ts.net)" bind:value={url} autocapitalize="off" autocorrect="off" inputmode="url" />
+      <input class="field" placeholder="Name (e.g. dev-machine)" bind:value={name} autocapitalize="off" />
+      <input class="field" placeholder="URL (e.g. https://dev-machine.example.invalid)" bind:value={url} autocapitalize="off" autocorrect="off" inputmode="url" />
       <input class="field" placeholder="Token" bind:value={token} autocapitalize="off" autocorrect="off" />
       {#if testResult}
         <div class="result" class:bad={testResult.startsWith('Failed')}>{testResult}</div>

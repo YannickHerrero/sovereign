@@ -18,7 +18,7 @@ Console mobile pour piloter des sessions pi à distance. Deux parties dans ce mo
 | Modèle et branche | Modèle sélectionnable via le RPC pi ; branche git affichée seulement. |
 | Approbations | pi est autonome. Une carte générique pour `extension_ui_request` est prévue en dernière phase, seulement si un cas réel apparaît. |
 | Notifications push | Hors v1. |
-| Git | Petits commits atomiques tout au long du développement. Auteur : yannick.herrero@proton.me (config locale du repo). |
+| Git | Petits commits atomiques tout au long du développement. Utiliser l’identité Git configurée pour le contributeur. |
 
 ## 2. Ce que pi fournit (vérifié sur pi 0.83.0)
 
@@ -27,7 +27,7 @@ Console mobile pour piloter des sessions pi à distance. Deux parties dans ce mo
 - Événements utiles : `agent_start`, `turn_start`, `message_update` (deltas `text_delta`, `toolcall_*`, `thinking_*`), `tool_execution_start|update|end`, `turn_end`, `agent_end`, `agent_settled`, `extension_ui_request`.
 - `get_state` renvoie `sessionFile`, `sessionId`, `sessionName`, `model`, `isStreaming`.
 - Sessions : fichiers JSONL v3 dans `~/.pi/agent/sessions/<cwd encodé>/`. Entrées `session` (cwd), `session_info` (name), `model_change`, `thinking_level_change`, `message` (user, assistant, toolResult) chaînées par `id`/`parentId`.
-- `--session-id <uuid>` crée une session avec un id connu, `--session <path|id>` la reprend. `--name` nomme la session. Le modèle par défaut vient de `~/.pi/agent/settings.json` (actuellement openai-codex / gpt-6-astra).
+- `--session-id <uuid>` crée une session avec un id connu, `--session <path|id>` la reprend. `--name` nomme la session. Le modèle par défaut vient de `~/.pi/agent/settings.json`.
 - Comportement observé : pi commence souvent par un `bash` d'exploration (pwd, git status) avant d'écrire. Les outils `write` et `edit` exposent `path` dans `args`.
 
 Choix qui en découle : les sessions restent dans le dossier par défaut de pi, donc elles apparaissent aussi dans `pi -r` sur la machine. Le serveur lit le JSONL directement pour afficher une tâche sans relancer pi, et ne lance un process que pour envoyer un prompt.
@@ -41,7 +41,7 @@ axum, tokio, tokio-tungstenite (via axum ws), serde, serde_json, rust-embed (PWA
 ### Config `~/.config/sovereign/config.toml`
 
 ```toml
-name = "wsl odk"          # nom affiché dans Workspaces
+name = "dev-machine"      # nom d’exemple affiché dans Workspaces
 listen = "127.0.0.1:7777"
 token = "..."             # généré avec le nouveau fichier ; un token vide est refusé
 repos_root = "~/dev"
@@ -254,7 +254,7 @@ Estimation : D0 est la phase la plus risquée (refactor du mobile), les autres s
 
 Objectif : une tâche Sovereign peut être exécutée par pi ou par Claude Code, au choix au moment de la création, avec un sélecteur de modèles groupés par fournisseur.
 
-### Faisabilité : élevée, vérifiée sur Claude Code 2.1.267 installé sur cette machine
+### Faisabilité : élevée, vérifiée sur Claude Code 2.1.267 dans un environnement de test
 
 Tests réalisés en ligne de commande depuis un dépôt bac à sable :
 
@@ -349,7 +349,7 @@ Décisions prises le 10 septembre 2026 : Claude Code tourne toujours en `--permi
 | C3 | Modèles groupés par agent et fournisseur, config `[claude]`, `set_model`, sélection à la création | `GET /models` renvoie les deux agents, changement de modèle en session vérifié |
 | C4 | Cartes de questions génériques (choix unique, multiple, confirmation, saisie) branchées sur les requêtes d'extension pi via `ui-response`. Spike limité à deux heures pour faire remonter AskUserQuestion de Claude Code sur stdio (comparer avec ce que fait l'Agent SDK TypeScript) ; si concluant, branchement de la même carte | question pi → carte → réponse reçue par l'extension |
 | C5 | PWA : sélecteur groupé, badge agent, carte de demande, chip composer | captures mobile et desktop, run Claude Code suivi depuis la PWA |
-| C6 | Titre par backend, README, redéploiement Vercel et Rebuild Citadel | |
+| C6 | Titre par backend, README, redéploiement Vercel et recompilation du serveur | |
 
 Ordre de grandeur : serveur 800 à 1 000 lignes de Rust (dont 250 de déplacement pur en C0), PWA 250 à 300 lignes. C0 est la phase à risque puisqu'elle touche le chemin pi en production ; elle se vérifie avec le test de bout en bout existant. C4 côté Claude Code dépend d'un comportement non reproduit sur la version installée ; le reste du chantier n'en dépend pas.
 

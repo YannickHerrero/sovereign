@@ -99,9 +99,9 @@ export async function mockProduct(page: Page) {
     localStorage.setItem('sovereign.settings.v1', JSON.stringify({
       openaiKey: '',
       servers: [
-        { id: 'macbook', name: 'MacBook Pro', url: 'https://macbook.demo.invalid', token: 'demo-not-a-secret', lastSeen: now },
-        { id: 'server', name: 'Serveur maison', url: 'https://server.demo.invalid', token: 'demo-not-a-secret', lastSeen: now },
-        { id: 'studio', name: 'Station de travail', url: 'https://studio.demo.invalid', token: 'demo-not-a-secret', lastSeen: now - 7_200_000 },
+        { id: 'dev-machine', name: 'Machine de démo', url: 'https://dev-machine.demo.invalid', token: 'demo-not-a-secret', lastSeen: now },
+        { id: 'test-server', name: 'Serveur de test', url: 'https://test-server.demo.invalid', token: 'demo-not-a-secret', lastSeen: now },
+        { id: 'sandbox', name: 'Bac à sable', url: 'https://sandbox.demo.invalid', token: 'demo-not-a-secret', lastSeen: now - 7_200_000 },
       ],
     }));
   }, { now });
@@ -122,10 +122,10 @@ export async function mockProduct(page: Page) {
       return route.abort();
     }
     if (path === '/api/workspace') {
-      if (url.hostname.startsWith('studio.')) return route.fulfill({ status: 503, json: { error: 'Demo machine offline' } });
+      if (url.hostname.startsWith('sandbox.')) return route.fulfill({ status: 503, json: { error: 'Demo machine offline' } });
       const workspace: Workspace = {
-        name: url.hostname.startsWith('macbook.') ? 'MacBook Pro' : 'Serveur maison',
-        version: '0.1.0', uptime_secs: 86400, agents_running: url.hostname.startsWith('macbook.') ? 1 : 2,
+        name: url.hostname.startsWith('dev-machine.') ? 'Machine de démo' : 'Serveur de test',
+        version: '0.1.0', uptime_secs: 86400, agents_running: url.hostname.startsWith('dev-machine.') ? 1 : 2,
         agents: ['pi', 'claude'],
       };
       return route.fulfill({ json: workspace });

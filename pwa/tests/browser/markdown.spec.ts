@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const longPath = '~/dev/dematDashboard/worktrees/' + 'long-branch-name-'.repeat(12);
+const longPath = '~/dev/example-project/worktrees/' + 'long-branch-name-'.repeat(12);
 const table = `| Chemin | Branche | Rôle |\n|:---|:---:|---:|\n| \`${longPath}\` | \`main\` | Actuel |\n| \`~/worktree\` | \`fix/bug\` | Correction |`;
 const reply = `# Worktrees\n\n${table}\n\n### Détails\n\n1. Premier\n   - Enfant\n2. Second\n\n> *Citation* et ~~barré~~\n\n- [x] Vérifié\n\n[Documentation](https://example.com)\n\n\`${longPath}\`\n\n\`\`\`ts\nconst path = "${longPath}";\n<script>alert(1)</script>\n\`\`\``;
 
