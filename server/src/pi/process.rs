@@ -94,7 +94,14 @@ impl PiProcess {
     }
 
     /// Sends a command and waits for its correlated response. Errors if pi reports failure.
-    pub async fn command(&self, mut command: Value) -> Result<Value> {
+    pub async fn command(&self, command: Value) -> Result<Value> {
+        self.command_within(command, COMMAND_TIMEOUT).await.map(|v| v.unwrap_or(Value::Null))
+    }
+
+    /// Like `command`, but gives up waiting after `grace` and returns `Ok(None)`. Extension
+    /// commands answer their `prompt` only once they finish, which can take as long as the
+    /// user needs to answer their questions.
+    pub async fn command_within(&self, mut command: Value, grace: Duration) -> Result<Option<Value>> {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed).to_string();
         command["id"] = Value::String(id.clone());
         let (tx, rx) = oneshot::channel();
@@ -110,16 +117,19 @@ impl PiProcess {
             }
         }
 
-        let response = match tokio::time::timeout(COMMAND_TIMEOUT, rx).await {
+        let response = match tokio::time::timeout(grace, rx).await {
             Ok(Ok(v)) => v,
             Ok(Err(_)) => bail!("pi exited before answering"),
             Err(_) => {
                 self.pending.lock().unwrap().remove(&id);
+                if grace < COMMAND_TIMEOUT {
+                    return Ok(None);
+                }
                 bail!("pi did not answer within {}s", COMMAND_TIMEOUT.as_secs());
             }
         };
         if response.get("success").and_then(Value::as_bool) == Some(true) {
-            Ok(response.get("data").cloned().unwrap_or(Value::Null))
+            Ok(Some(response.get("data").cloned().unwrap_or(Value::Null)))
         } else {
             let error = response.get("error").and_then(Value::as_str).unwrap_or("unknown error");
             bail!("pi rejected {}: {error}", command["type"].as_str().unwrap_or("command"))

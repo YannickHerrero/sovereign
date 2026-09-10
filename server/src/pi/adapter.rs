@@ -78,7 +78,9 @@ impl AgentProcess for PiAgent {
         } else {
             json!({ "type": "prompt", "message": message, "images": images })
         };
-        self.process.command(command).await?;
+        // Rejections (bad streaming behavior, unknown session) come back at once; a slow answer
+        // means an extension command is running and the prompt was accepted.
+        self.process.command_within(command, std::time::Duration::from_secs(3)).await?;
         Ok(())
     }
 
