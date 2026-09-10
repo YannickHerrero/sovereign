@@ -4,6 +4,7 @@ Console mobile pour piloter des sessions [pi](https://github.com/badlogic/pi-mon
 
 - `server/` : serveur Rust, un par machine. Gère les sessions pi, expose une API HTTP + WebSocket, sert la PWA.
 - `pwa/` : interface mobile (Svelte 5, Vite), embarquée dans le binaire du serveur.
+- `landing/` : site de présentation du produit (HTML/CSS/JS, Vite), déployable indépendamment. Voir [son README](landing/README.md).
 
 Voir [PLAN.md](PLAN.md) pour l'architecture et les phases.
 
@@ -104,6 +105,8 @@ SOVEREIGN_CONFIG=/tmp/sov.toml SOVEREIGN_STORE=/tmp/tasks.json cargo run
 cd pwa
 pnpm dev
 ```
+
+Pour la landing page, lancer `cd landing && pnpm install && pnpm dev` (http://localhost:5174). `pnpm build` produit un site statique dans `landing/dist`, sans modifier la PWA ni le serveur.
 
 En debug, le serveur lit `pwa/dist` sur le disque : un `pnpm build` suffit pour rafraîchir la PWA servie.
 
