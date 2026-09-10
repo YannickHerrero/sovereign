@@ -12,8 +12,8 @@ pub struct ImageContent {
 }
 
 pub fn validate(images: &[ImageContent]) -> Result<(), &'static str> {
-    if images.len() > 1 {
-        return Err("Only one image per message is supported");
+    if images.len() > 10 {
+        return Err("Attach at most 10 images per message");
     }
     for image in images {
         if !matches!(image.mime_type.as_str(), "image/jpeg" | "image/png" | "image/webp" | "image/gif") {
@@ -40,7 +40,9 @@ mod tests {
         assert_eq!(value["type"], "image");
         assert_eq!(value["mimeType"], "image/png");
         assert!(validate(&[image.clone()]).is_ok());
-        assert!(validate(&[image.clone(), image]).is_err());
+        assert!(validate(&[image.clone(), image.clone()]).is_ok());
+        assert!(validate(&vec![image.clone(); 10]).is_ok());
+        assert!(validate(&vec![image; 11]).is_err());
         assert!(validate(&[]).is_ok());
         for data in ["", "bad", "===="] {
             assert!(validate(&[ImageContent { data: data.into(), mime_type: "image/png".into() }]).is_err());

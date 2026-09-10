@@ -43,7 +43,8 @@ pub fn router(state: SharedState) -> Router {
         .route("/tasks/{id}/file", get(tasks::file))
         .route("/tasks/{id}/ui-response", post(tasks::ui_response))
         .route("/ws", get(ws::upgrade))
-        .layer(DefaultBodyLimit::max(8 * 1024 * 1024))
+        // Ten 5 MiB images, base64 encoded, plus message/JSON overhead.
+        .layer(DefaultBodyLimit::max(72 * 1024 * 1024))
         .layer(middleware::from_fn_with_state(state.clone(), require_token))
         .with_state(state);
 
