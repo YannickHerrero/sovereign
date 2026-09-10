@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::pi::session::RunStatus;
+use crate::agent::RunStatus;
 use crate::store::Task;
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]

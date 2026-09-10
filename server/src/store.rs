@@ -7,11 +7,14 @@ use std::sync::Mutex;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::pi::session::RunStatus;
+use crate::agent::{AgentKind, RunStatus};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: String,
+    /// Which coding agent runs this task; tasks created before the field existed are pi's.
+    #[serde(default)]
+    pub agent: AgentKind,
     pub repo: String,
     pub cwd: PathBuf,
     pub session_id: String,

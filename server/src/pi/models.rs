@@ -2,32 +2,13 @@
 use std::path::Path;
 
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
+
+pub use crate::agent::{Model, ModelList, ModelRef};
 use tokio::sync::mpsc;
 
 use super::process::PiProcess;
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
-pub struct ModelRef {
-    pub provider: String,
-    pub id: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Model {
-    pub provider: String,
-    pub id: String,
-    pub name: String,
-    #[serde(default)]
-    pub input: Vec<String>,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct ModelList {
-    pub models: Vec<Model>,
-    pub current: Option<Model>,
-}
 
 pub async fn list(process: &PiProcess) -> Result<ModelList> {
     #[derive(Deserialize)]
@@ -87,20 +68,21 @@ mod tests {
 
         let store = std::sync::Arc::new(crate::store::Store::open(dir.join("tasks.json")).unwrap());
         let task = crate::store::Task {
-            id: "task".into(), repo: "repo".into(), cwd: dir.clone(),
+            id: "task".into(), agent: Default::default(), repo: "repo".into(), cwd: dir.clone(),
             session_id: uuid::Uuid::new_v4().to_string(), session_file: None,
             title: "test".into(), pinned: false, created_at: 0, updated_at: 0,
             last_status: None, baseline: None, touched_files: vec![],
         };
         store.insert(task.clone()).unwrap();
         let config = crate::config::Config { pi_bin: bin.into(), ..Default::default() };
-        let agents = super::super::manager::Agents::new(config, store);
+        let backend: std::sync::Arc<dyn crate::agent::Backend> = std::sync::Arc::new(crate::pi::adapter::PiBackend { bin: bin.into() });
+        let agents = crate::agent::manager::Agents::new(config, store, vec![backend]);
         let mut events = agents.subscribe();
         let choice = ModelRef { provider: "test".into(), id: "vision".into() };
         agents.set_model(&task, &choice).await.unwrap();
         assert!(matches!(events.recv().await.unwrap(),
-            super::super::manager::ServerEvent::RunEvent {
-                event: super::super::manager::RunEvent::ModelChanged { .. }, ..
+            crate::agent::manager::ServerEvent::RunEvent {
+                event: crate::agent::manager::RunEvent::ModelChanged { .. }, ..
             }));
         std::fs::write(dir.join("working"), "").unwrap();
         let error = agents.set_model(&task, &choice).await.unwrap_err();

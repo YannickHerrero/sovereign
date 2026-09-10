@@ -7,37 +7,10 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::Value;
 
-#[derive(Debug, Default)]
-pub struct Session {
-    pub cwd: Option<String>,
-    pub name: Option<String>,
-    pub model: Option<String>,
-    pub turns: Vec<Turn>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "role", rename_all = "snake_case")]
-pub enum Turn {
-    User { text: String, at: u64, #[serde(default)] images: Vec<super::image::ImageContent> },
-    Agent {
-        text: String,
-        files: Vec<String>,
-        at: u64,
-        status: RunStatus,
-    },
-}
-
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum RunStatus {
-    #[default]
-    Settled,
-    Error,
-    Aborted,
-}
+pub use crate::agent::{RunStatus, Session, Turn};
 
 #[derive(Deserialize)]
 struct Entry {
