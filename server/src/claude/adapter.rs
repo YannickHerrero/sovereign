@@ -248,6 +248,19 @@ fn config_dir() -> PathBuf {
         .unwrap_or_else(|| dirs::home_dir().expect("home directory").join(".claude"))
 }
 
+fn user_text(content: Option<&Value>) -> String {
+    match content {
+        Some(Value::String(s)) => s.clone(),
+        Some(Value::Array(blocks)) => blocks
+            .iter()
+            .filter(|b| b.get("type").and_then(Value::as_str) == Some("text"))
+            .filter_map(|b| b.get("text").and_then(Value::as_str))
+            .collect::<Vec<_>>()
+            .join("\n"),
+        _ => String::new(),
+    }
+}
+
 fn describe(id: &str) -> Model {
     let name = match id.trim_end_matches("[1m]") {
         "fable" => "Fable (latest)",
@@ -370,8 +383,17 @@ fn signals_for(event: &Value, running: &AtomicBool, current_model: &Mutex<Option
             }
             out
         }
-        // Tool results come back as user messages: the model is about to think again.
-        "user" => vec![RunSignal::Status("Thinking…".into())],
+        // Tool results and harness notes come back as user messages: the model is about to
+        // think again.
+        "user" => {
+            let text = user_text(event.pointer("/message/content"));
+            let mut out = Vec::new();
+            if let Some(note) = super::session::system_note(event, &text) {
+                out.push(RunSignal::Note(note));
+            }
+            out.push(RunSignal::Status("Thinking…".into()));
+            out
+        }
         "result" => {
             running.store(false, Ordering::Relaxed);
             let is_error = event.get("is_error").and_then(Value::as_bool).unwrap_or(false);

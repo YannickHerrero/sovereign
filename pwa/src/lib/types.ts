@@ -50,7 +50,8 @@ export interface ImageContent {
 
 export type Turn =
   | { role: 'user'; text: string; at: number; images?: ImageContent[] }
-  | { role: 'agent'; text: string; files: string[]; at: number; status: RunStatus };
+  | { role: 'agent'; text: string; files: string[]; at: number; status: RunStatus }
+  | { role: 'system'; text: string; at: number };
 
 /** A message the server holds until the current run ends. */
 export interface QueuedMessage {
@@ -100,6 +101,7 @@ export type RunEvent =
   | { kind: 'text_delta'; delta: string }
   | { kind: 'file_touched'; path: string }
   | { kind: 'settled'; turn: Turn }
+  | { kind: 'note'; text: string; at: number }
   | { kind: 'error'; message: string }
   | { kind: 'ui_request'; request: Record<string, unknown> }
   | { kind: 'model_changed'; model: Model }

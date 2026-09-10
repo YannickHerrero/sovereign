@@ -58,6 +58,9 @@ pub fn parse(raw: &str) -> Session {
     branch.reverse();
 
     let mut agent: Option<AgentAcc> = None;
+    // Harness notes arrive mid-run; they are shown before the agent turn they interrupted, which
+    // is also where the live view puts them.
+    let mut notes: Vec<Turn> = Vec::new();
     for entry in &branch {
         let Some(message) = entry.get("message") else { continue };
         let at = entry.get("timestamp").and_then(Value::as_str).map(parse_rfc3339_ms).unwrap_or(0);
@@ -74,6 +77,11 @@ pub fn parse(raw: &str) -> Session {
                     }
                     continue;
                 }
+                if let Some(note) = system_note(entry, &text) {
+                    notes.push(Turn::System { text: note, at });
+                    continue;
+                }
+                session.turns.append(&mut notes);
                 if let Some(acc) = agent.take() {
                     session.turns.push(acc.finish());
                 }
@@ -90,10 +98,33 @@ pub fn parse(raw: &str) -> Session {
             _ => {}
         }
     }
+    session.turns.append(&mut notes);
     if let Some(acc) = agent.take() {
         session.turns.push(acc.finish());
     }
     session
+}
+
+/// Recognises a user-role message that Claude Code injected itself and summarises it.
+/// Transcript entries carry `origin.kind`; the live stream only carries the text, so the
+/// well-known tags are matched too.
+pub fn system_note(entry: &Value, text: &str) -> Option<String> {
+    let kind = entry.pointer("/origin/kind").and_then(Value::as_str);
+    let text = text.trim_start();
+    if kind == Some("task-notification") || text.starts_with("<task-notification>") {
+        let summary = between(text, "<summary>", "</summary>").unwrap_or("Background task finished");
+        return Some(summary.trim().to_string());
+    }
+    if text.starts_with("<system-reminder>") {
+        return Some("Claude Code reminder".to_string());
+    }
+    kind.map(|k| format!("Claude Code {}", k.replace('-', " ")))
+}
+
+fn between<'a>(text: &'a str, open: &str, close: &str) -> Option<&'a str> {
+    let start = text.find(open)? + open.len();
+    let end = text[start..].find(close)? + start;
+    Some(&text[start..end])
 }
 
 struct AgentAcc {
@@ -215,7 +246,8 @@ mod tests {
 {"parentUuid":"a2","isSidechain":false,"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"ok"}]},"uuid":"u2","timestamp":"2026-09-09T08:47:01.296Z","toolUseResult":{}}
 {"parentUuid":"u2","isSidechain":true,"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"subagent noise"}]},"uuid":"side","timestamp":"2026-09-09T08:47:02.000Z"}
 {"parentUuid":"u2","isSidechain":false,"type":"attachment","attachment":{"type":"x"},"uuid":"att1","timestamp":"2026-09-09T08:47:02.500Z"}
-{"parentUuid":"att1","isSidechain":false,"type":"assistant","message":{"model":"claude-sonnet-5","role":"assistant","content":[{"type":"text","text":"done"}]},"uuid":"a3","timestamp":"2026-09-09T08:47:03.000Z"}
+{"parentUuid":"att1","isSidechain":false,"type":"user","origin":{"kind":"task-notification"},"message":{"role":"user","content":"<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>\n<summary>Background command \"grep docs\" completed (exit code 0)</summary>\n</task-notification>"},"uuid":"n1","timestamp":"2026-09-09T08:47:02.700Z"}
+{"parentUuid":"n1","isSidechain":false,"type":"assistant","message":{"model":"claude-sonnet-5","role":"assistant","content":[{"type":"text","text":"done"}]},"uuid":"a3","timestamp":"2026-09-09T08:47:03.000Z"}
 {"parentUuid":"a3","isSidechain":false,"type":"user","message":{"role":"user","content":[{"type":"text","text":"again"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"AAAA"}}]},"uuid":"u3","timestamp":"2026-09-09T08:48:00.000Z"}
 {"parentUuid":"u3","isSidechain":false,"type":"assistant","message":{"model":"claude-sonnet-5","role":"assistant","content":[{"type":"text","text":"partial"}]},"uuid":"a4","timestamp":"2026-09-09T08:48:01.000Z"}
 {"parentUuid":"a4","isSidechain":false,"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]},"uuid":"u4","timestamp":"2026-09-09T08:48:02.000Z"}
@@ -229,12 +261,24 @@ mod tests {
         assert_eq!(session.cwd.as_deref(), Some("/repo"));
         assert_eq!(session.model.as_deref(), Some("claude-sonnet-5"));
         assert_eq!(session.name, None);
-        assert_eq!(session.turns.len(), 4);
+        assert_eq!(session.turns.len(), 5);
         assert!(matches!(&session.turns[0], Turn::User { text, at, .. } if text == "do it" && *at == 1788943613857));
-        assert!(matches!(&session.turns[1], Turn::Agent { text, files, status: RunStatus::Settled, .. }
+        assert!(matches!(&session.turns[1], Turn::System { text, .. } if text == "Background command \"grep docs\" completed (exit code 0)"));
+        assert!(matches!(&session.turns[2], Turn::Agent { text, files, status: RunStatus::Settled, .. }
             if text == "done" && files == &vec!["/repo/a.txt".to_string()]));
-        assert!(matches!(&session.turns[2], Turn::User { text, images, .. } if text == "again" && images.len() == 1));
-        assert!(matches!(&session.turns[3], Turn::Agent { text, status: RunStatus::Aborted, .. } if text == "partial"));
+        assert!(matches!(&session.turns[3], Turn::User { text, images, .. } if text == "again" && images.len() == 1));
+        assert!(matches!(&session.turns[4], Turn::Agent { text, status: RunStatus::Aborted, .. } if text == "partial"));
+    }
+
+    #[test]
+    fn recognises_harness_notes_from_tags_and_origin() {
+        let plain = serde_json::json!({});
+        assert_eq!(system_note(&plain, "hello <task-notification>"), None);
+        assert_eq!(system_note(&plain, "<task-notification>\n<summary>Done</summary>").as_deref(), Some("Done"));
+        assert_eq!(system_note(&plain, "<task-notification>no summary").as_deref(), Some("Background task finished"));
+        assert_eq!(system_note(&plain, "<system-reminder>x</system-reminder>").as_deref(), Some("Claude Code reminder"));
+        let tagged = serde_json::json!({"origin": {"kind": "compact-summary"}});
+        assert_eq!(system_note(&tagged, "whatever").as_deref(), Some("Claude Code compact summary"));
     }
 
     #[test]
