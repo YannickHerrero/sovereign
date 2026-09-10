@@ -4,6 +4,8 @@ server/target/
 # Node
 pwa/node_modules/
 pwa/dist/
+pwa/test-results/
+pwa/playwright-report/
 *.log
 
 # Editors / OS

@@ -100,4 +100,9 @@ pnpm dev
 
 En debug, le serveur lit `pwa/dist` sur le disque : un `pnpm build` suffit pour rafraîchir la PWA servie.
 
-Tests : `cargo test` dans `server/`, `pnpm check` dans `pwa/`.
+Tests : `cargo test` dans `server/`. Dans `pwa/` :
+- `pnpm check` : contrôle TypeScript/Svelte.
+- `pnpm test` : tests unitaires du rendu Markdown et de sa sécurité.
+- `pnpm exec playwright install chromium` (une fois), puis `pnpm test:browser` : rendu du fil mobile/desktop, streaming, historique rechargé et absence de débordement horizontal. Aucun serveur Rust ni agent requis.
+
+Les réponses utilisent le Markdown GFM (tableaux, listes imbriquées, tâches, citations, liens et code). Le HTML brut est affiché littéralement ; les images Markdown distantes restent du texte alternatif pour éviter les chargements automatiques. Seuls les liens HTTP(S) et mailto sont actifs. Les tableaux et blocs de code larges défilent indépendamment du fil.
