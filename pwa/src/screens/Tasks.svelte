@@ -114,6 +114,9 @@
             <div class="task-title">{t.title}</div>
             <div class="meta">
               <span>{t.repo}</span>
+              {#if t.agent === 'claude'}
+                <span class="agent-tag">Claude</span>
+              {/if}
               <span class="sep">·</span>
               <span style:color={meta.color}>{meta.label}</span>
               {#if t.plus + t.minus > 0}
@@ -149,7 +152,7 @@
     {branch}
     {repos}
     onRepoChange={(name) => { repo = name; selectedModel = null; }}
-    model={selectedModel?.id}
+    model={selectedModel?.id} agent={selectedModel?.agent}
     {loadModels}
     onModelChange={(model) => { selectedModel = model; }}
     modelDisabled={!repo}
@@ -221,6 +224,13 @@
     font-size: 12px;
     color: var(--muted-2);
     white-space: nowrap;
+  }
+  .agent-tag {
+    font-size: 10.5px;
+    color: var(--accent);
+    background: rgba(44, 111, 187, 0.1);
+    border-radius: 999px;
+    padding: 1px 6px;
   }
   .empty {
     padding: 40px 22px;

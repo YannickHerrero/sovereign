@@ -55,13 +55,13 @@
   <div class="body">
     <div class="hint">
       <p>Describe what to plan, ask or build in <strong>{repo || 'a repo'}</strong>.</p>
-      <p class="sub">pi runs on {store.server.name} and streams its progress here.</p>
+      <p class="sub">{selectedModel?.agent === 'claude' ? 'Claude Code' : 'pi'} runs on {store.server.name} and streams its progress here.</p>
       {#if error}<p class="error">{error}</p>{/if}
     </div>
   </div>
   <DockedComposer placeholder="Plan, ask, build…" {repo} {branch} {repos}
     onRepoChange={(name) => { repo = name; selectedModel = null; }}
-    model={selectedModel?.id} {loadModels} onModelChange={(model) => { selectedModel = model; }}
+    model={selectedModel?.id} agent={selectedModel?.agent} {loadModels} onModelChange={(model) => { selectedModel = model; }}
     modelDisabled={!repo} onSubmit={create} autofocus />
 </div>
 

@@ -87,6 +87,7 @@
     repo={summary?.repo ?? ''}
     branch={session.detail?.branch}
     model={session.detail?.model}
+    agent={summary?.agent}
     loadModels={() => session.models()}
     onModelChange={(model) => session.changeModel(model)}
     modelDisabled={session.working}

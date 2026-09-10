@@ -1,7 +1,12 @@
 export type TaskState = 'working' | 'done' | 'no_changes' | 'failed' | 'pending';
 
+export type AgentKind = 'pi' | 'claude';
+
+export const AGENT_LABEL: Record<AgentKind, string> = { pi: 'pi', claude: 'Claude Code' };
+
 export interface TaskSummary {
   id: string;
+  agent: AgentKind;
   repo: string;
   title: string;
   pinned: boolean;
@@ -15,18 +20,22 @@ export interface TaskSummary {
 export type RunStatus = 'settled' | 'error' | 'aborted';
 
 export interface ModelRef {
+  agent: AgentKind;
   provider: string;
   id: string;
 }
 
-export interface PiModel extends ModelRef {
+export interface Model extends ModelRef {
   name: string;
   input: string[];
 }
 
+/** Kept as an alias while call sites migrate. */
+export type PiModel = Model;
+
 export interface ModelList {
-  models: PiModel[];
-  current: PiModel | null;
+  models: Model[];
+  current: Model | null;
 }
 
 export interface ImageContent {
@@ -68,6 +77,7 @@ export interface Workspace {
   version: string;
   uptime_secs: number;
   agents_running: number;
+  agents: AgentKind[];
 }
 
 export type RunEvent =
@@ -77,18 +87,8 @@ export type RunEvent =
   | { kind: 'file_touched'; path: string }
   | { kind: 'settled'; turn: Turn }
   | { kind: 'error'; message: string }
-  | { kind: 'ui_request'; request: UiRequest }
-  | { kind: 'model_changed'; model: PiModel };
-
-export interface UiRequest {
-  id: string;
-  method: 'select' | 'confirm' | 'input' | 'editor' | 'notify' | 'setStatus' | 'setWidget' | 'setTitle' | 'set_editor_text';
-  title?: string;
-  message?: string;
-  options?: string[];
-  placeholder?: string;
-  prefill?: string;
-}
+  | { kind: 'ui_request'; request: Record<string, unknown> }
+  | { kind: 'model_changed'; model: Model };
 
 export type ServerEvent =
   | { type: 'task_upsert'; task: TaskSummary }

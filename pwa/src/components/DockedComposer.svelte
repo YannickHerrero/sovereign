@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import { ComposerState, isSubmitShortcut, type SubmitHandler } from '../lib/composer.svelte';
-  import type { ModelList, PiModel, Repo } from '../lib/types';
+  import type { AgentKind, ModelList, PiModel, Repo } from '../lib/types';
   import ModelPicker from './ModelPicker.svelte';
   import Icon from './Icon.svelte';
 
@@ -10,6 +10,7 @@
     repo: string;
     branch?: string | null;
     model?: string | null;
+    agent?: AgentKind | null;
     loadModels: () => Promise<ModelList>;
     onModelChange: (model: PiModel) => Promise<void> | void;
     modelDisabled?: boolean;
@@ -20,7 +21,7 @@
     autofocus?: boolean;
   }
 
-  let { placeholder, repo, branch = null, model = null, loadModels, onModelChange, modelDisabled = false, repos, onRepoChange, onSubmit, autofocus = false }: Props = $props();
+  let { placeholder, repo, branch = null, model = null, agent = null, loadModels, onModelChange, modelDisabled = false, repos, onRepoChange, onSubmit, autofocus = false }: Props = $props();
 
   const c = new ComposerState();
   let modelBusy = $state(false);
@@ -127,7 +128,7 @@
         <button class="attach" aria-label="Attach image" title="Attach image" disabled={c.busy || c.mode === 'voice'} onclick={() => imageInput.click()}>
           <Icon name="plus" color="var(--ink-control)" />
         </button>
-        <ModelPicker {model} {loadModels} {onModelChange} disabled={modelDisabled || c.busy || c.mode === 'voice'} bind:busy={modelBusy} />
+        <ModelPicker {model} {agent} {loadModels} {onModelChange} disabled={modelDisabled || c.busy || c.mode === 'voice'} bind:busy={modelBusy} />
       </div>
       {#if c.mode === 'voice'}
         <button class="record" aria-label="Stop recording" onclick={stopVoice}>

@@ -52,6 +52,9 @@
             <div class="task-title">{t.title}</div>
             <div class="meta">
               <span>{t.repo}</span>
+              {#if t.agent === 'claude'}
+                <span class="agent-tag">Claude</span>
+              {/if}
               <span class="sep">·</span>
               <span style:color={meta.color}>{meta.label}</span>
               {#if t.plus + t.minus > 0}
@@ -176,6 +179,13 @@
     font-size: 11.5px;
     color: var(--muted-2);
     white-space: nowrap;
+  }
+  .agent-tag {
+    font-size: 10.5px;
+    color: var(--accent);
+    background: rgba(44, 111, 187, 0.1);
+    border-radius: 999px;
+    padding: 1px 6px;
   }
   .empty {
     padding: 36px 18px;
