@@ -30,6 +30,9 @@
 
 <aside class="sidebar" class:collapsed>
   <div class="titlebar">
+    {#if !collapsed}
+      <img class="logo" src="/logo.png" alt="Sovereign" width="22" height="22" />
+    {/if}
     <button class="round" aria-label={collapsed ? 'Expand workspaces sidebar' : 'Collapse workspaces sidebar'}
       title={collapsed ? 'Expand workspaces sidebar' : 'Collapse workspaces sidebar'}
       aria-expanded={!collapsed} aria-controls="workspace-navigation" onclick={onToggle}>
@@ -99,8 +102,13 @@
     flex: none;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    padding: 0 10px;
+    justify-content: space-between;
+    padding: 0 10px 0 16px;
+  }
+  .logo {
+    display: block;
+    width: 22px;
+    height: 22px;
   }
   .collapsed .titlebar {
     justify-content: center;

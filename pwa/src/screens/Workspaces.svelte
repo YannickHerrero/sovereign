@@ -11,6 +11,7 @@
 <div class="screen">
   <div class="header">
     <div>
+      <img class="logo" src="/logo.png" alt="Sovereign" width="28" height="28" />
       <div class="title">Workspaces</div>
       <div class="subtitle">Choose a machine to work on</div>
     </div>
@@ -59,6 +60,12 @@
     align-items: flex-start;
     justify-content: space-between;
     padding: calc(var(--safe-top) + 22px) 16px 4px 22px;
+  }
+  .logo {
+    display: block;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 10px;
   }
   .list {
     padding: 16px 14px calc(var(--safe-bottom) + 40px);
