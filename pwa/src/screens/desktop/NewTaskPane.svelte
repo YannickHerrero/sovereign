@@ -1,6 +1,7 @@
 <script lang="ts">
   import DockedComposer from '../../components/DockedComposer.svelte';
   import { api } from '../../lib/api';
+  import { prefs } from '../../lib/prefs.svelte';
   import { router } from '../../lib/router.svelte';
   import type { ImageContent, PiModel, Repo } from '../../lib/types';
   import type { WorkspaceStore } from '../../lib/workspace.svelte';
@@ -53,7 +54,7 @@
     <div class="meta">{store.server.name}</div>
   </div>
   <div class="body">
-    <div class="hint">
+    <div class="hint" class:wide={prefs.wide}>
       <p>Describe what to plan, ask or build in <strong>{repo || 'a repo'}</strong>.</p>
       <p class="sub">{selectedModel?.agent === 'claude' ? 'Claude Code' : 'pi'} runs on {store.server.name} and streams its progress here.</p>
       {#if error}<p class="error">{error}</p>{/if}
@@ -62,7 +63,7 @@
   <DockedComposer placeholder="Plan, ask, build…" {repo} {branch} {repos}
     onRepoChange={(name) => { repo = name; selectedModel = null; }}
     model={selectedModel?.id} agent={selectedModel?.agent} {loadModels} onModelChange={(model) => { selectedModel = model; }}
-    modelDisabled={!repo} onSubmit={create} autofocus captureTyping />
+    modelDisabled={!repo} onSubmit={create} autofocus captureTyping wide={prefs.wide} />
 </div>
 
 <style>
@@ -98,6 +99,9 @@
     display: flex;
     align-items: flex-end;
     justify-content: center;
+  }
+  .hint.wide {
+    max-width: none;
   }
   .hint {
     max-width: 720px;

@@ -23,12 +23,14 @@
     captureTyping?: boolean;
     /** Page-level overlays (menu, diff) that must keep stray keystrokes for themselves. */
     typingBlocked?: () => boolean;
+    /** Drop the 720px column and span the pane. */
+    wide?: boolean;
     autofocus?: boolean;
   }
 
   let {
     placeholder, repo, branch = null, model = null, agent = null, loadModels, onModelChange, modelDisabled = false,
-    repos, onRepoChange, onSubmit, autofocus = false, captureTyping = false, typingBlocked = () => false,
+    repos, onRepoChange, onSubmit, autofocus = false, captureTyping = false, typingBlocked = () => false, wide = false,
   }: Props = $props();
 
   const c = new ComposerState();
@@ -111,7 +113,7 @@
 <input hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" bind:this={imageInput} onchange={chooseImage} />
 
 <div class="dock">
-  <div class="card">
+  <div class="card" class:wide>
     <div class="context">
       {#if repos}
         <label class="picker">
@@ -187,6 +189,9 @@
   .dock {
     flex: none;
     padding: 14px 28px 22px;
+  }
+  .card.wide {
+    max-width: none;
   }
   .card {
     max-width: 720px;

@@ -5,7 +5,7 @@
   import RequestCard from './RequestCard.svelte';
 
   /** `variant` only changes spacing and type sizes; the structure is shared. */
-  let { session, variant = 'mobile' }: { session: ChatSession; variant?: 'mobile' | 'desktop' } = $props();
+  let { session, variant = 'mobile', wide = false }: { session: ChatSession; variant?: 'mobile' | 'desktop'; wide?: boolean } = $props();
 
   let expandedFiles = $state<Record<number, boolean>>({});
   let scroller = $state<HTMLDivElement | null>(null);
@@ -22,7 +22,7 @@
   }
 </script>
 
-<div class="scroll thread {variant}" bind:this={scroller}>
+<div class="scroll thread {variant}" class:wide bind:this={scroller}>
   <div class="inner">
     {#each session.turns as turn, index (index)}
       {#if turn.role === 'user'}
@@ -107,6 +107,9 @@
     margin: 0 auto;
     padding: 0 28px;
     gap: 24px;
+  }
+  .desktop.wide .inner {
+    max-width: none;
   }
   .message-image {
     display: block;

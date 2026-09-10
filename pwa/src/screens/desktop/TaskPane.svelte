@@ -3,6 +3,7 @@
   import Icon from '../../components/Icon.svelte';
   import Thread from '../../components/Thread.svelte';
   import { ChatSession } from '../../lib/chat.svelte';
+  import { prefs } from '../../lib/prefs.svelte';
   import { router } from '../../lib/router.svelte';
   import type { WorkspaceStore } from '../../lib/workspace.svelte';
 
@@ -71,6 +72,7 @@
     <div class="menu">
       <button onclick={pin}>{summary?.pinned ? 'Unpin' : 'Pin'}</button>
       <button onclick={rename}>Rename</button>
+      <button onclick={() => { menuOpen = false; prefs.wide = !prefs.wide; }}>{prefs.wide ? 'Standard width' : 'Full width'}</button>
       {#if session.working}
         <button onclick={stop}>Stop agent</button>
       {/if}
@@ -78,7 +80,7 @@
     </div>
   {/if}
 
-  <Thread {session} variant="desktop" />
+  <Thread {session} variant="desktop" wide={prefs.wide} />
 
   <DockedComposer
     placeholder="Follow up…"
@@ -88,6 +90,7 @@
     agent={summary?.agent}
     captureTyping
     typingBlocked={() => menuOpen}
+    wide={prefs.wide}
     loadModels={() => session.models()}
     onModelChange={(model) => session.changeModel(model)}
     modelDisabled={session.working}
