@@ -53,6 +53,10 @@ export const api = {
   tasks: (s: Server) => request<TaskSummary[]>(s, 'GET', '/tasks'),
   task: (s: Server, id: string) => request<TaskDetail>(s, 'GET', `/tasks/${id}`),
   diff: (s: Server, id: string) => request<{ files: FileDiff[] }>(s, 'GET', `/tasks/${id}/diff`),
+  /** Changed files with stats but no patches; pair with `fileDiff` to load lazily. */
+  diffSummary: (s: Server, id: string) => request<{ files: FileDiff[] }>(s, 'GET', `/tasks/${id}/diff?summary=true`),
+  fileDiff: (s: Server, id: string, path: string) =>
+    request<{ files: FileDiff[] }>(s, 'GET', `/tasks/${id}/diff?path=${encodeURIComponent(path)}`),
   /** Working-tree text of a touched file (plain text, not JSON). */
   file: async (s: Server, id: string, path: string): Promise<string> => {
     const res = await fetch(`${s.url}/api/tasks/${id}/file?path=${encodeURIComponent(path)}`, {

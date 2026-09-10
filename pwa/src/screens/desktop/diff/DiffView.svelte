@@ -18,6 +18,10 @@
   let scroller = $state<HTMLDivElement | null>(null);
   /** Blocks near the viewport get their diff rendered; others stay a header until scrolled to. */
   let visible = $state<Record<string, boolean>>({});
+  /** Patches arrive file by file as blocks come into view. */
+  let patches = $state<Record<string, FileDiff>>({});
+  let patchErrors = $state<Record<string, string>>({});
+  const patchPending = new Set<string>();
   const fileCache = new Map<string, Promise<string>>();
 
   const task = $derived(store.task(taskId));
@@ -44,7 +48,10 @@
       (entries) => {
         for (const entry of entries) {
           const path = (entry.target as HTMLElement).dataset.path!;
-          if (entry.isIntersecting) visible[path] = true;
+          if (entry.isIntersecting) {
+            visible[path] = true;
+            void fetchPatch(path);
+          }
         }
         const top = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
         if (top) activePath = (top.target as HTMLElement).dataset.path!;
@@ -59,7 +66,8 @@
     loading = true;
     error = null;
     try {
-      files = (await api.diff(store.server, taskId)).files;
+      // Stats first; each patch is fetched when its block scrolls into reach.
+      files = (await api.diffSummary(store.server, taskId)).files;
       activePath = files[0]?.path ?? null;
     } catch (err) {
       error = (err as Error).message;
@@ -72,9 +80,22 @@
     router.back({ name: 'chat', wsId: store.server.id, taskId });
   }
 
+  async function fetchPatch(path: string) {
+    if (patches[path] || patchPending.has(path)) return;
+    patchPending.add(path);
+    try {
+      const file = (await api.fileDiff(store.server, taskId, path)).files[0];
+      if (file) patches[path] = file;
+    } catch (err) {
+      patchErrors[path] = (err as Error).message;
+      patchPending.delete(path);
+    }
+  }
+
   async function jump(path: string) {
     activePath = path;
     visible[path] = true;
+    void fetchPatch(path);
     await tick();
     scroller?.querySelector(`[data-path="${CSS.escape(path)}"]`)?.scrollIntoView({ block: 'start' });
   }
@@ -119,17 +140,18 @@
       {/if}
       {#each files as file (file.path)}
         <div data-path={file.path}>
-          {#if visible[file.path]}
+          {#if visible[file.path] && patches[file.path]}
             <FileBlock
-              {file}
+              file={patches[file.path]}
               mode={diffPrefs.mode}
               viewed={diffPrefs.isViewed(taskId, file.path)}
               onViewed={(v) => diffPrefs.setViewed(taskId, file.path, v)}
               loadFile={() => loadFile(file.path)}
             />
           {:else}
-            <div class="placeholder">
+            <div class="placeholder" class:failed={!!patchErrors[file.path]}>
               <span class="path">{file.path}</span>
+              <span class="hint">{patchErrors[file.path] ?? (visible[file.path] ? 'Loading…' : '')}</span>
               <span class="stats"><span class="plus">+{file.plus}</span><span class="minus">-{file.minus}</span></span>
             </div>
           {/if}
@@ -235,6 +257,15 @@
   .path {
     font-family: var(--mono);
     font-size: 12px;
+  }
+  .hint {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted-3);
+  }
+  .placeholder.failed .hint {
+    color: var(--red);
   }
   .empty {
     padding: 40px;

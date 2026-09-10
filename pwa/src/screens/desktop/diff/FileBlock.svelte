@@ -18,9 +18,13 @@
   let { file, mode, viewed, onViewed, loadFile }: Props = $props();
 
   const STEP = 20;
+  /** Diffs above this many lines wait for a click, like GitHub's large-diff guard. */
+  const LARGE = 1500;
 
   const parsed = $derived(parsePatch(file.patch));
+  const lineCount = $derived(parsed.hunks.reduce((n, h) => n + h.lines.length, 0));
   let collapsed = $state(false);
+  let forceLarge = $state(false);
   let hl = $state<LineHighlighter>(plain);
 
   $effect(() => {
@@ -163,6 +167,11 @@
       <div class="note">Binary file, no text diff.</div>
     {:else if !parsed.hunks.length}
       <div class="note">No textual changes.</div>
+    {:else if lineCount > LARGE && !forceLarge}
+      <div class="note large">
+        <span>Large diff: {lineCount.toLocaleString()} lines are not rendered by default.</span>
+        <button class="show" onclick={() => (forceLarge = true)}>Show diff</button>
+      </div>
     {:else}
       <div class="body {mode}">
         {#each sections as section (section.gapIndex)}
@@ -270,6 +279,19 @@
   }
   .note.error {
     color: var(--red);
+  }
+  .note.large {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .show {
+    font-size: 12.5px;
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 7px;
+    background: rgba(44, 111, 187, 0.1);
   }
   .body {
     font-family: var(--mono);
