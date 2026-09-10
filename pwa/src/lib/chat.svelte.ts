@@ -1,5 +1,6 @@
 import { api } from './api';
 import { ago } from './format';
+import { answerBody, normalize, type AgentRequest, type Answers } from './requests';
 import type { ModelRef, FileDiff, ImageContent, RunEvent, TaskDetail, TaskSummary, TouchedFile, Turn } from './types';
 import type { WorkspaceStore } from './workspace.svelte';
 
@@ -22,6 +23,10 @@ export class ChatSession {
   diffFiles = $state<FileDiff[]>([]);
   diffLoading = $state(false);
   now = $state(Date.now());
+  /** Questions the agent is waiting on, oldest first. */
+  requests = $state<AgentRequest[]>([]);
+  /** Last fire-and-forget notice from the agent (pi `notify`). */
+  notice = $state<string | null>(null);
 
   private appendListeners = new Set<() => void>();
 
@@ -113,8 +118,16 @@ export class ChatSession {
       case 'error':
         this.error = event.message;
         break;
-      case 'ui_request':
+      case 'ui_request': {
+        const agent = this.summary?.agent ?? 'pi';
+        const request = normalize(agent, event.request);
+        if (request) {
+          this.requests.push(request);
+        } else if (agent === 'pi' && event.request.method === 'notify') {
+          this.notice = String(event.request.message ?? '');
+        }
         break;
+      }
       case 'model_changed':
         if (this.detail) this.detail.model = event.model.id;
         return;
@@ -133,6 +146,16 @@ export class ChatSession {
       this.turns = this.turns.filter((t) => t !== optimistic);
       this.error = (err as Error).message;
       throw err;
+    }
+  }
+
+  /** Sends the user's answers (or a dismissal when null) back to the agent. */
+  async answer(request: AgentRequest, answers: Answers | null) {
+    try {
+      await api.uiResponse(this.store.server, this.taskId, answerBody(request, answers));
+      this.requests = this.requests.filter((r) => r !== request);
+    } catch (err) {
+      this.error = (err as Error).message;
     }
   }
 

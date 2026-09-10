@@ -2,6 +2,7 @@
   import { tick } from 'svelte';
   import type { ChatSession } from '../lib/chat.svelte';
   import { blocks } from '../lib/markdown';
+  import RequestCard from './RequestCard.svelte';
 
   /** `variant` only changes spacing and type sizes; the structure is shared. */
   let { session, variant = 'mobile' }: { session: ChatSession; variant?: 'mobile' | 'desktop' } = $props();
@@ -101,6 +102,13 @@
       </div>
     {/if}
 
+    {#each session.requests as request (request.id)}
+      <RequestCard {request} onAnswer={(answers) => session.answer(request, answers)} />
+    {/each}
+
+    {#if session.notice}
+      <div class="notice">{session.notice}</div>
+    {/if}
     {#if session.error}
       <div class="error">{session.error}</div>
     {/if}
@@ -278,6 +286,10 @@
   }
   .desktop .shimmer {
     font-size: 13.5px;
+  }
+  .notice {
+    font-size: 12.5px;
+    color: var(--muted-2);
   }
   .error {
     font-size: 12.5px;
