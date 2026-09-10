@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import DockedComposer from '../../components/DockedComposer.svelte';
   import { api } from '../../lib/api';
   import { prefs } from '../../lib/prefs.svelte';
@@ -28,7 +29,7 @@
     let cancelled = false;
     repos = [];
     repo = '';
-    selectedModel = null;
+    selectedModel = untrack(() => prefs.lastModel(server.id));
     api.repos(server)
       .then((list) => {
         if (cancelled) return;
@@ -41,7 +42,6 @@
 
   function chooseRepo(name: string) {
     repo = name;
-    selectedModel = null;
     prefs.selectRepo(store.server.id, name);
   }
 
@@ -82,7 +82,7 @@
   </div>
   <DockedComposer placeholder="Plan, ask, build…" {repo} {branch} {repos}
     onRepoChange={chooseRepo}
-    model={selectedModel?.id} agent={selectedModel?.agent} {loadModels} onModelChange={(model) => { selectedModel = model; }}
+    model={selectedModel?.id} agent={selectedModel?.agent} {loadModels} onModelChange={(model) => { selectedModel = model; prefs.selectModel(store.server.id, model); }}
     modelDisabled={!repo} onSubmit={create} draftKey="{store.server.id}/new" autofocus captureTyping wide={prefs.wide} />
 </div>
 

@@ -1,5 +1,6 @@
 import { api } from './api';
 import { ago } from './format';
+import { prefs } from './prefs.svelte';
 import { isActive } from './tasks';
 import { answerBody, normalize, type AgentRequest, type Answers } from './requests';
 import type { ModelRef, FileDiff, ImageContent, RunEvent, TaskDetail, TaskSummary, TouchedFile, Turn } from './types';
@@ -169,6 +170,7 @@ export class ChatSession {
 
   async changeModel(model: ModelRef) {
     const selected = await api.setModel(this.store.server, this.taskId, model);
+    prefs.selectModel(this.store.server.id, selected);
     if (this.detail) this.detail.model = selected.id;
   }
 

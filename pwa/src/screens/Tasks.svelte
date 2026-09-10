@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import Composer from '../components/Composer.svelte';
   import Icon from '../components/Icon.svelte';
   import { api } from '../lib/api';
@@ -31,7 +32,7 @@
     let cancelled = false;
     repos = [];
     repo = '';
-    selectedModel = null;
+    selectedModel = untrack(() => prefs.lastModel(server.id));
     api.repos(server)
       .then((list) => {
         if (cancelled) return;
@@ -44,7 +45,6 @@
 
   function chooseRepo(name: string) {
     repo = name;
-    selectedModel = null;
     prefs.selectRepo(store.server.id, name);
   }
 
@@ -179,7 +179,7 @@
     onRepoChange={chooseRepo}
     model={selectedModel?.id} agent={selectedModel?.agent}
     {loadModels}
-    onModelChange={(model) => { selectedModel = model; }}
+    onModelChange={(model) => { selectedModel = model; prefs.selectModel(store.server.id, model); }}
     modelDisabled={!repo}
     onSubmit={create}
   />
