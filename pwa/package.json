@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:browser": "playwright test",
+    "screenshots:landing": "playwright test --config playwright.landing.config.ts",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
