@@ -354,3 +354,77 @@ Décisions prises le 10 septembre 2026 : Claude Code tourne toujours en `--permi
 Ordre de grandeur : serveur 800 à 1 000 lignes de Rust (dont 250 de déplacement pur en C0), PWA 250 à 300 lignes. C0 est la phase à risque puisqu'elle touche le chemin pi en production ; elle se vérifie avec le test de bout en bout existant. C4 côté Claude Code dépend d'un comportement non reproduit sur la version installée ; le reste du chantier n'en dépend pas.
 
 État au 10 septembre 2026 : C0 à C6 livrées. Vérifié : comportement pi inchangé (test de bout en bout), tâche Claude Code créée avec un modèle choisi, streaming, stats, diff, transcript relu à froid, changement de modèle en session, liste de modèles à plat taguée par agent et fournisseur, cartes de questions (choix, confirmation, saisie) pilotées par une extension pi réelle. Le spike AskUserQuestion côté Claude Code reste ouvert : le mécanisme est câblé (normalisation et réponse `updatedInput.answers`) mais la CLI 2.1.267 n'émet pas la requête.
+
+## 9. Confort d'usage : frappe directe, groupement par projet, vue diff avancée (plan, 10 septembre 2026)
+
+Trois chantiers indépendants, du plus petit au plus gros. Aucun ne touche le mobile téléphone, sauf le groupement par projet qui s'y applique aussi.
+
+### F1. Taper pour écrire sans focaliser le composer
+
+Comportement : sur un panneau de tâche (desktop et iPad avec clavier), une frappe de caractère hors de tout champ focalise le composer et y insère le caractère. Le collage (Ctrl+V ou ⌘V) hors champ est aussi redirigé vers le composer, images comprises.
+
+Règles, dans l'ordre d'évaluation :
+1. Ignorer si la touche n'est pas un caractère imprimable (une touche d'un seul caractère ou Espace), si Ctrl, Alt ou Cmd est enfoncé (Shift autorisé), ou si `isComposing` est vrai (saisie IME).
+2. Ignorer si la cible est un champ de saisie, un textarea, un select ou un élément `contenteditable`. Couvre la recherche de la liste, les champs des cartes de questions et le sélecteur de modèles.
+3. Ignorer si un `dialog` est ouvert, si le menu "…" est ouvert ou si le panneau de diff est affiché.
+4. Sinon : `preventDefault`, focus du textarea du composer, insertion à la position du curseur, curseur déplacé après l'insertion. Sur une feuille mobile fermée (iPad en paysage), ouvrir la feuille d'abord.
+
+Implémentation : un écouteur `keydown` et un `paste` posés au niveau du panneau de tâche (`TaskPane` et `Chat`), qui appellent une méthode `insert(text)` exposée par les composers via `ComposerState` (ajout d'un champ `pendingFocus` consommé par le composant qui possède le textarea). Le composer ancré et la feuille mobile partagent déjà `ComposerState`, donc une seule implémentation.
+
+Vérification : test Playwright headless à 1280 px qui tape "hello" sans cliquer, vérifie que le textarea contient "hello" et a le focus ; second test qui ouvre le sélecteur de modèles, tape, et vérifie que le composer n'a rien reçu.
+
+Taille : une soixantaine de lignes PWA.
+
+### F2. Grouper les conversations par projet
+
+Comportement : la liste des tâches propose deux regroupements, mémorisés dans le navigateur.
+- "Par date" : Pinned, Today, Earlier, l'existant.
+- "Par projet" : une section par repo, repliable, triée par activité la plus récente, en-tête avec le nom du repo, le nombre de tâches et un point qui pulse si une tâche y tourne. Dans une section, épinglées d'abord puis par date. État replié mémorisé par workspace et repo.
+
+Recherche et filtres d'état s'appliquent aux deux modes. Une section vide après filtrage disparaît.
+
+Emplacement du choix :
+- Desktop : un petit segmenté "Date · Project" sous le sous-titre de la colonne des tâches.
+- Mobile : le bouton filtre garde son cycle d'états ; le regroupement devient une ligne dans la barre de recherche dépliée (deux boutons), pour ne pas ajouter d'icône dans l'en-tête.
+
+Implémentation : `lib/tasks.ts` gagne `groupByRepo(tasks, query, filter)` à côté de `group`, `Group` gagne `repo?`, `count`, `running`. Un store `lib/prefs.svelte.ts` mémorise le mode et les sections repliées. `Tasks.svelte` et `TaskList.svelte` rendent les en-têtes de section repliables.
+
+Vérification : test unitaire vitest sur `groupByRepo` (tri, épinglées en tête, filtre), captures desktop et mobile des deux modes.
+
+Taille : une centaine de lignes PWA, rien côté serveur.
+
+### F3. Vue diff avancée sur grand écran
+
+Cible : l'expérience GitHub de la capture fournie. Sur desktop la vue remplace le tiroir de 520 px et occupe tout le panneau de droite, avec un bouton retour vers la conversation ; l'URL devient `/w/:ws/t/:id/diff` pour que le retour navigateur fonctionne. Le mobile garde la feuille actuelle.
+
+**Colonne gauche (260 px)** : arborescence des fichiers modifiés reconstruite depuis les chemins, dossiers repliables, filtre texte, stats `+n -m` par fichier, coche "Viewed" mémorisée localement par tâche et fichier, clic qui fait défiler jusqu'au fichier.
+
+**Centre** : un bloc par fichier, en-tête collant avec chemin, stats, bouton copier le chemin et coche "Viewed" ; hunks séparés par leur en-tête `@@` ; numéros de ligne ancien et nouveau ; bascule unifié / côte à côte mémorisée ; boutons pour déplier le contexte entre deux hunks et en haut et bas de fichier ; fichiers repliés une fois cochés "Viewed".
+
+**Données** : le patch unifié par fichier que renvoie déjà `GET /tasks/:id/diff` suffit pour les numéros de ligne (parse de `@@ -a,b +c,d @@`) et pour la vue côte à côte (alignement des suppressions et ajouts d'un même hunk). Le dépliage du contexte demande un nouvel endpoint `GET /tasks/:id/file?path=…&side=base|work` qui renvoie le contenu du fichier à la révision de base de la tâche ou dans le working tree, borné à 2 Mio et refusé pour les binaires. Le chemin est validé contre `touched_files`.
+
+**Performance** : rendu paresseux des fichiers hors écran (un bloc replié affiche seulement son en-tête tant qu'il n'est pas visible), pas de coloration syntaxique en première étape. La coloration est une seconde étape, avec une librairie légère chargée à la demande.
+
+Implémentation, tous nouveaux fichiers dans `pwa/src/lib/diff/` et `pwa/src/screens/desktop/diff/` :
+- `lib/diff/parse.ts` : patch unifié → `{ hunks: [{ header, oldStart, newStart, lines: [{ kind: context|add|del, oldNo?, newNo?, text }] }] }`, avec tests unitaires sur des patches réels (ajout de fichier, suppression, renommage détecté par git, fichier binaire).
+- `lib/diff/sideBySide.ts` : hunks → paires de lignes alignées.
+- `lib/diff/tree.ts` : chemins → arbre de dossiers.
+- `lib/diff/viewed.svelte.ts` : coches et mode d'affichage mémorisés.
+- `screens/desktop/diff/DiffView.svelte`, `FileTree.svelte`, `FileDiff.svelte`, `HunkUnified.svelte`, `HunkSplit.svelte`.
+- Serveur : `GET /tasks/:id/file` dans `api/tasks.rs`, lecture via `git show <base>:<path>` ou le working tree dans `git.rs`.
+
+Vérification : tests unitaires du parseur et de l'alignement, capture à 1280 et 1600 px sur un diff réel à plusieurs fichiers, dépliage de contexte vérifié sur un fichier existant, mobile inchangé.
+
+Taille : 500 à 700 lignes PWA, une cinquantaine côté serveur.
+
+### Ordre et estimation
+
+| # | Chantier | Livrable vérifiable |
+|---|---|---|
+| F1 | Frappe directe et collage redirigé | tests Playwright de frappe et de non-capture |
+| F2 | Groupement par projet | test unitaire, captures des deux modes |
+| F3a | Parseur, arbre, vue unifiée plein panneau avec colonne de fichiers, route `/diff` | capture sur un diff multi-fichiers |
+| F3b | Côte à côte, coches Viewed, dépliage de contexte, endpoint fichier | capture côte à côte, contexte déplié |
+| F3c | Coloration syntaxique à la demande | seulement si le poids du bundle reste raisonnable |
+
+F1 et F2 se font dans la journée ; F3 est un chantier de l'ordre du desktop, à découper en deux livraisons.
