@@ -59,7 +59,7 @@
       if (c.mode === 'voice' || c.sending || !shouldCapturePaste(event, typingBlocked)) return;
       event.preventDefault();
       open = true;
-      if (c.pasteImage(event)) return;
+      if (c.pasteImage(event)) { void focusEnd(); return; }
       c.append(event.clipboardData?.getData('text/plain') ?? '');
       void focusEnd();
     };
@@ -102,17 +102,28 @@
 
   function chooseImage(event: Event) {
     const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
+    const files = Array.from(input.files ?? []);
     input.value = '';
-    if (file) void c.attachImage(file);
+    void c.attachImages(files, textarea?.selectionStart, textarea?.selectionEnd);
+    void focusReference();
   }
 
   function onPaste(event: ClipboardEvent) {
-    if (c.pasteImage(event)) event.preventDefault();
+    if (c.pasteImage(event, textarea?.selectionStart, textarea?.selectionEnd)) {
+      event.preventDefault();
+      void focusReference();
+    }
+  }
+
+  async function focusReference() {
+    const position = (textarea?.selectionEnd ?? 0) + c.draft.length - (textarea?.value.length ?? 0);
+    await tick();
+    textarea?.focus();
+    textarea?.setSelectionRange(position, position);
   }
 
   async function submit() {
-    if (!c.hasDraft || c.busy || modelBusy) return;
+    if (!c.hasDraft || c.busy || modelBusy || c.missingReferences.length) return;
     textarea?.blur();
     open = false;
     const sent = await c.submit(onSubmit);
@@ -127,7 +138,7 @@
   }
 </script>
 
-<input hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" bind:this={imageInput} onchange={chooseImage} />
+<input hidden type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" bind:this={imageInput} onchange={chooseImage} />
 
 {#if !open}
   <div class="idle" style:bottom="calc(var(--safe-bottom) + 14px + {keyboard.height}px)">
@@ -179,11 +190,15 @@
           enterkeyhint="send"
         ></textarea>
       {/if}
-      {#if c.image}
+      {#each c.images as image (image.id)}
         <div class="attachment">
-          <img src={`data:${c.image.mimeType};base64,${c.image.data}`} alt="Attachment preview" />
-          <button disabled={c.sending} onclick={() => c.removeImage()} aria-label="Remove image">Remove image</button>
+          <img src={`data:${image.content.mimeType};base64,${image.content.data}`} alt={`[${image.id}] preview`} />
+          <span>[{image.id}]</span>
+          <button disabled={c.busy} onclick={() => c.removeImage(image.id)} aria-label={`Remove ${image.id}`}>Remove image</button>
         </div>
+      {/each}
+      {#if c.missingReferences.length}
+        <div class="voice-error" role="alert">Missing attachments: {c.missingReferences.join(', ')}. Remove these references before sending.</div>
       {/if}
       {#if c.imageLoading}<div class="voice-error">Loading image…</div>{/if}
       {#if c.imageError}<div class="voice-error" role="alert">{c.imageError}</div>{/if}
@@ -206,7 +221,7 @@
             <span class="wave"><i></i><i></i><i></i><i></i><i></i></span>
           </button>
         {:else if c.hasDraft}
-          <button class="round send" aria-label="Send" disabled={c.busy || modelBusy} onclick={submit}>
+          <button class="round send" aria-label="Send" disabled={c.busy || modelBusy || c.missingReferences.length > 0} onclick={submit}>
             <Icon name="send" color="#fff" />
           </button>
         {:else}

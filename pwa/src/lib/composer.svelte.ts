@@ -12,7 +12,8 @@ export type SubmitHandler = (text: string, images: ImageContent[]) => Promise<vo
 export class ComposerState {
   #draft = $state('');
   sending = $state(false);
-  image = $state<ImageContent | null>(null);
+  images = $state<{ id: string; content: ImageContent }[]>([]);
+  private nextImageId = 1;
   imageLoading = $state(false);
   imageError = $state<string | null>(null);
   mode = $state<'text' | 'voice'>('text');
@@ -38,7 +39,7 @@ export class ComposerState {
   }
 
   get hasDraft(): boolean {
-    return this.draft.trim().length > 0 || this.image !== null;
+    return this.draft.trim().length > 0 || this.images.length > 0;
   }
 
   get timer(): string {
@@ -108,34 +109,47 @@ export class ComposerState {
     this.mode = 'text';
   }
 
-  /** Attaches the first image found in a paste event. Returns true when one was taken. */
-  pasteImage(event: ClipboardEvent): boolean {
-    const file = Array.from(event.clipboardData?.files ?? []).find((f) => f.type.startsWith('image/'));
-    if (!file) return false;
-    void this.attachImage(file);
+  /** Inserts references synchronously so subsequent typing cannot move the paste location. */
+  pasteImage(event: ClipboardEvent, start = this.draft.length, end = start): boolean {
+    const files = Array.from(event.clipboardData?.files ?? []).filter((f) => f.type.startsWith('image/'));
+    if (!files.length) return false;
+    void this.attachImages(files, start, end);
     return true;
   }
 
-  async attachImage(file: File) {
-    if (this.busy) return;
+  async attachImages(files: File[], start = this.draft.length, end = start) {
+    if (this.busy || !files.length) return;
     this.imageError = null;
-    if (!IMAGE_TYPES.includes(file.type)) {
-      this.imageError = 'Choose a JPEG, PNG, WebP or GIF image.';
+    if (this.images.length + files.length > 10) {
+      this.imageError = 'Attach at most 10 images per message.';
       return;
     }
-    if (!file.size || file.size > IMAGE_MAX_BYTES) {
-      this.imageError = 'Image must be non-empty and at most 5 MiB.';
+    if (files.some((file) => !IMAGE_TYPES.includes(file.type))) {
+      this.imageError = 'Choose JPEG, PNG, WebP or GIF images.';
       return;
     }
+    if (files.some((file) => !file.size || file.size > IMAGE_MAX_BYTES)) {
+      this.imageError = 'Each image must be non-empty and at most 5 MiB.';
+      return;
+    }
+    // Do not reuse numbers, including references restored from a text-only draft.
+    for (const match of this.draft.matchAll(/\[IMG_(\d+)\]/g)) {
+      this.nextImageId = Math.max(this.nextImageId, Number(match[1]) + 1);
+    }
+    const ids = files.map(() => `IMG_${this.nextImageId++}`);
+    this.draft = this.draft.slice(0, start) + ids.map((id) => `[${id}]`).join(' ') + this.draft.slice(end);
     this.imageLoading = true;
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
+      const contents = await Promise.all(files.map((file) => new Promise<ImageContent>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Could not read image.'));
+        reader.onload = () => {
+          const url = reader.result as string;
+          resolve({ type: 'image', mimeType: file.type, data: url.slice(url.indexOf(',') + 1) });
+        };
+        reader.onerror = () => reject(new Error('Could not read images. Remove their references or attach them again.'));
         reader.readAsDataURL(file);
-      });
-      this.image = { type: 'image', mimeType: file.type, data: dataUrl.slice(dataUrl.indexOf(',') + 1) };
+      })));
+      this.images.push(...contents.map((content, i) => ({ id: ids[i]!, content })));
     } catch (err) {
       this.imageError = (err as Error).message;
     } finally {
@@ -143,8 +157,14 @@ export class ComposerState {
     }
   }
 
-  removeImage() {
-    this.image = null;
+  removeImage(id: string) {
+    if (this.busy) return;
+    this.images = this.images.filter((image) => image.id !== id);
+  }
+
+  get missingReferences(): string[] {
+    return [...new Set(this.draft.match(/\[IMG_\d+\]/g) ?? [])]
+      .filter((ref) => !this.images.some((image) => `[${image.id}]` === ref));
   }
 
   /**
@@ -153,12 +173,18 @@ export class ComposerState {
    */
   async submit(onSubmit: SubmitHandler): Promise<boolean> {
     const text = this.draft.trim();
-    if ((!text && !this.image) || this.busy) return false;
+    if ((!text && !this.images.length) || this.busy || this.missingReferences.length) return false;
     this.sending = true;
     try {
-      await onSubmit(text, this.image ? [this.image] : []);
+      // Both agent protocols accept ordered images. Keep the mapping in the message
+      // itself so it survives queues and native agent session history as well.
+      const mapping = this.images.length
+        ? `\n\nAttached images (in order): ${this.images.map((image) => `[${image.id}]`).join(', ')}.`
+        : '';
+      await onSubmit(text + mapping, this.images.map((image) => image.content));
       this.draft = '';
-      this.image = null;
+      this.images = [];
+      this.nextImageId = 1;
       this.imageError = null;
       return true;
     } catch {
