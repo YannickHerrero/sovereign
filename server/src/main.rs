@@ -1,6 +1,7 @@
 mod agent;
 mod api;
 mod assets;
+mod claude;
 mod config;
 mod git;
 mod pi;
@@ -16,6 +17,7 @@ use tracing_subscriber::EnvFilter;
 
 use crate::config::Config;
 use crate::agent::manager::Agents;
+use crate::claude::adapter::ClaudeBackend;
 use crate::pi::adapter::PiBackend;
 use crate::store::Store;
 
@@ -36,7 +38,9 @@ async fn main() -> Result<()> {
         .unwrap_or_else(Store::default_path);
     let store = Arc::new(Store::open(store_path)?);
     let pi: Arc<dyn agent::Backend> = Arc::new(PiBackend { bin: config.pi_bin.clone() });
-    let agents = Agents::new(config.clone(), store.clone(), vec![pi]);
+    let claude: Arc<dyn agent::Backend> =
+        Arc::new(ClaudeBackend { bin: config.claude.bin.clone(), models: config.claude.models.clone() });
+    let agents = Agents::new(config.clone(), store.clone(), vec![pi, claude]);
     let listen = config.listen.clone();
     let state = Arc::new(api::AppState { config, store, agents, started_at: Instant::now() });
     let listener = tokio::net::TcpListener::bind(&listen).await?;
