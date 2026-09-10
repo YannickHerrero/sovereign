@@ -3,7 +3,8 @@
   import Icon from '../components/Icon.svelte';
   import { api } from '../lib/api';
   import { router } from '../lib/router.svelte';
-  import { FILTERS, group, stateMeta, type Filter } from '../lib/tasks';
+  import { prefs } from '../lib/prefs.svelte';
+  import { FILTERS, groupTasks, stateMeta, type Filter } from '../lib/tasks';
   import type { ImageContent, PiModel, Repo } from '../lib/types';
   import type { WorkspaceStore } from '../lib/workspace.svelte';
 
@@ -19,7 +20,8 @@
   let error = $state<string | null>(null);
 
   const filter = $derived<Filter>(FILTERS[filterIx]);
-  const groups = $derived(group(store.tasks, query, filter));
+  const groups = $derived(groupTasks(prefs.grouping, store.tasks, query, filter));
+  const byRepo = $derived(prefs.grouping === 'repo');
   const branch = $derived(repos.find((r) => r.name === repo)?.branch ?? null);
 
   $effect(() => store.acquire());
@@ -83,8 +85,12 @@
 
   <div class="heading">
     <div class="title">{store.server.name}</div>
-    {#if filter}
+    {#if filter && byRepo}
+      <div class="subtitle">By project · {filter}</div>
+    {:else if filter}
       <div class="subtitle">Filtered · {filter}</div>
+    {:else if byRepo}
+      <div class="subtitle">By project</div>
     {:else if !store.connected && store.loaded}
       <div class="subtitle">{store.error ? 'Offline' : 'Reconnecting…'}</div>
     {/if}
@@ -94,13 +100,27 @@
     <div class="search">
       <!-- svelte-ignore a11y_autofocus -->
       <input class="field" bind:value={query} placeholder="Search tasks and repos" autofocus autocapitalize="off" />
+      <div class="segmented" role="radiogroup" aria-label="Group tasks by">
+        <button role="radio" aria-checked={!byRepo} class:on={!byRepo} onclick={() => (prefs.grouping = 'date')}>By date</button>
+        <button role="radio" aria-checked={byRepo} class:on={byRepo} onclick={() => (prefs.grouping = 'repo')}>By project</button>
+      </div>
     </div>
   {/if}
 
   <div class="scroll list">
-    {#each groups as g (g.label)}
-      <div class="group">{g.label}</div>
-      {#each g.items as t (t.id)}
+    {#each groups as g (g.key)}
+      {@const collapsed = byRepo && prefs.isCollapsed(store.server.id, g.label)}
+      {#if byRepo}
+        <button class="group group--repo" aria-expanded={!collapsed} onclick={() => prefs.toggleCollapsed(store.server.id, g.label)}>
+          <span class="caret" class:closed={collapsed}><Icon name="chevron" color="var(--muted-3)" /></span>
+          <span class="repo-name">{g.label}</span>
+          {#if g.running > 0}<span class="dot dot--pulse" style:width="6px" style:height="6px"></span>{/if}
+          <span class="count">{g.items.length}</span>
+        </button>
+      {:else}
+        <div class="group">{g.label}</div>
+      {/if}
+      {#each collapsed ? [] : g.items as t (t.id)}
         {@const meta = stateMeta(t.state)}
         <button class="row" onclick={() => router.go({ name: 'chat', wsId: store.server.id, taskId: t.id })}>
           <div class="dotcol">
@@ -172,6 +192,52 @@
   .search {
     padding: 10px 18px 2px;
     animation: fadeUp 0.18s ease both;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .segmented {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 10px;
+    background: var(--press);
+    align-self: flex-start;
+  }
+  .segmented button {
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: var(--muted-2);
+  }
+  .segmented button.on {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+  .group--repo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+  }
+  .caret {
+    display: flex;
+    transition: transform 0.15s ease;
+  }
+  .caret.closed {
+    transform: rotate(-90deg);
+  }
+  .repo-name {
+    color: var(--ink);
+    font-weight: 500;
+    font-size: 13px;
+  }
+  .count {
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--muted-3);
   }
   .list {
     padding: 12px 0 calc(var(--safe-bottom) + 128px);

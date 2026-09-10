@@ -1,14 +1,16 @@
 <script lang="ts">
   import Icon from '../../components/Icon.svelte';
   import { router } from '../../lib/router.svelte';
-  import { group, stateMeta, type Filter } from '../../lib/tasks';
+  import { prefs } from '../../lib/prefs.svelte';
+  import { groupTasks, stateMeta, type Filter } from '../../lib/tasks';
   import type { WorkspaceStore } from '../../lib/workspace.svelte';
 
   let { store, filter, activeTaskId }: { store: WorkspaceStore; filter: Filter; activeTaskId: string | undefined } = $props();
 
   let query = $state('');
 
-  const groups = $derived(group(store.tasks, query, filter));
+  const groups = $derived(groupTasks(prefs.grouping, store.tasks, query, filter));
+  const byRepo = $derived(prefs.grouping === 'repo');
   const running = $derived(store.tasks.filter((t) => t.state === 'working').length);
   const subtitle = $derived(
     !store.loaded
@@ -32,13 +34,29 @@
 
   <div class="heading">
     <div class="ws-name">{store.server.name}</div>
-    <div class="sub">{subtitle}</div>
+    <div class="sub-row">
+      <div class="sub">{subtitle}</div>
+      <div class="segmented" role="radiogroup" aria-label="Group tasks by">
+        <button role="radio" aria-checked={!byRepo} class:on={!byRepo} onclick={() => (prefs.grouping = 'date')}>Date</button>
+        <button role="radio" aria-checked={byRepo} class:on={byRepo} onclick={() => (prefs.grouping = 'repo')}>Project</button>
+      </div>
+    </div>
   </div>
 
   <div class="scroll rows">
-    {#each groups as g (g.label)}
-      <div class="group">{g.label}</div>
-      {#each g.items as t (t.id)}
+    {#each groups as g (g.key)}
+      {@const collapsed = byRepo && prefs.isCollapsed(store.server.id, g.label)}
+      {#if byRepo}
+        <button class="group group--repo" aria-expanded={!collapsed} onclick={() => prefs.toggleCollapsed(store.server.id, g.label)}>
+          <span class="caret" class:closed={collapsed}><Icon name="chevron" color="var(--muted-3)" /></span>
+          <span class="repo-name">{g.label}</span>
+          {#if g.running > 0}<span class="dot dot--pulse" style:width="6px" style:height="6px"></span>{/if}
+          <span class="count">{g.items.length}</span>
+        </button>
+      {:else}
+        <div class="group">{g.label}</div>
+      {/if}
+      {#each collapsed ? [] : g.items as t (t.id)}
         {@const meta = stateMeta(t.state)}
         <button class="row" class:active={t.id === activeTaskId} onclick={() => router.go({ name: 'chat', wsId: store.server.id, taskId: t.id })}>
           <div class="dotcol">
@@ -116,6 +134,55 @@
   }
   .heading {
     padding: 14px 18px 6px;
+  }
+  .sub-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .segmented {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 8px;
+    background: var(--press);
+    flex: none;
+  }
+  .segmented button {
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    color: var(--muted-2);
+  }
+  .segmented button.on {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+  .group--repo {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    text-align: left;
+  }
+  .caret {
+    display: flex;
+    transition: transform 0.15s ease;
+  }
+  .caret.closed {
+    transform: rotate(-90deg);
+  }
+  .repo-name {
+    color: var(--ink);
+    font-weight: 500;
+    font-size: 12px;
+  }
+  .count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--muted-3);
   }
   .ws-name {
     font-size: 17px;
