@@ -88,6 +88,8 @@
     branch={session.detail?.branch}
     model={session.detail?.model}
     agent={summary?.agent}
+    captureTyping
+    typingBlocked={() => menuOpen || session.diffOpen}
     loadModels={() => session.models()}
     onModelChange={(model) => session.changeModel(model)}
     modelDisabled={session.working}

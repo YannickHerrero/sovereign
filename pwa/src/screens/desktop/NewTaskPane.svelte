@@ -62,7 +62,7 @@
   <DockedComposer placeholder="Plan, ask, build…" {repo} {branch} {repos}
     onRepoChange={(name) => { repo = name; selectedModel = null; }}
     model={selectedModel?.id} agent={selectedModel?.agent} {loadModels} onModelChange={(model) => { selectedModel = model; }}
-    modelDisabled={!repo} onSubmit={create} autofocus />
+    modelDisabled={!repo} onSubmit={create} autofocus captureTyping />
 </div>
 
 <style>

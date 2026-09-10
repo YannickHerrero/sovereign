@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import { ComposerState, isSubmitShortcut, type SubmitHandler } from '../lib/composer.svelte';
+  import { shouldCapture, shouldCapturePaste } from '../lib/typeahead';
   import type { AgentKind, ModelList, PiModel, Repo } from '../lib/types';
   import ModelPicker from './ModelPicker.svelte';
   import Icon from './Icon.svelte';
@@ -18,10 +19,17 @@
     repos?: Repo[];
     onRepoChange?: (name: string) => void;
     onSubmit: SubmitHandler;
+    /** Route keystrokes and pastes made outside any field into this composer. */
+    captureTyping?: boolean;
+    /** Page-level overlays (menu, diff) that must keep stray keystrokes for themselves. */
+    typingBlocked?: () => boolean;
     autofocus?: boolean;
   }
 
-  let { placeholder, repo, branch = null, model = null, agent = null, loadModels, onModelChange, modelDisabled = false, repos, onRepoChange, onSubmit, autofocus = false }: Props = $props();
+  let {
+    placeholder, repo, branch = null, model = null, agent = null, loadModels, onModelChange, modelDisabled = false,
+    repos, onRepoChange, onSubmit, autofocus = false, captureTyping = false, typingBlocked = () => false,
+  }: Props = $props();
 
   const c = new ComposerState();
   let modelBusy = $state(false);
@@ -32,6 +40,31 @@
 
   $effect(() => {
     if (autofocus) void focusEnd();
+  });
+
+  $effect(() => {
+    if (!captureTyping) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (c.mode === 'voice' || c.sending) return;
+      const char = shouldCapture(event, typingBlocked);
+      if (char === null) return;
+      event.preventDefault();
+      c.append(char);
+      void focusEnd();
+    };
+    const onStrayPaste = (event: ClipboardEvent) => {
+      if (c.mode === 'voice' || c.sending || !shouldCapturePaste(event, typingBlocked)) return;
+      event.preventDefault();
+      if (c.pasteImage(event)) return;
+      c.append(event.clipboardData?.getData('text/plain') ?? '');
+      void focusEnd();
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('paste', onStrayPaste);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('paste', onStrayPaste);
+    };
   });
 
   async function focusEnd() {

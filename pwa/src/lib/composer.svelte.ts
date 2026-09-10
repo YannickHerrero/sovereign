@@ -38,6 +38,11 @@ export class ComposerState {
     return this.sending || this.imageLoading;
   }
 
+  /** Appends text typed or pasted while the field had no focus. */
+  append(text: string) {
+    this.draft += text;
+  }
+
   /**
    * Starts dictation. Resolves false when voice is unavailable or failed to start; in that
    * case `voiceError` explains why and the caller should fall back to typing.
