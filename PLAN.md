@@ -249,3 +249,104 @@ Nouveaux fichiers desktop :
 Estimation : D0 est la phase la plus risquée (refactor du mobile), les autres sont additives.
 
 État au 9 septembre 2026 : D0 à D6 livrées. Mobile vérifié identique au pixel près avant et après D0 (cinq écrans). Desktop vérifié à 1280×824 en headless : liste, tâche ouverte, nouvelle tâche, diff, settings, et un run pi créé depuis le composer ancré avec ⌘↵. Déployé sur Vercel.
+
+## 8. Compatibilité Claude Code (plan, 10 septembre 2026)
+
+Objectif : une tâche Sovereign peut être exécutée par pi ou par Claude Code, au choix au moment de la création, avec un sélecteur de modèles groupés par fournisseur.
+
+### Faisabilité : élevée, vérifiée sur Claude Code 2.1.267 installé sur cette machine
+
+Tests réalisés en ligne de commande depuis un dépôt bac à sable :
+
+| Besoin | Résultat |
+|---|---|
+| Process persistant multi-tours | `claude -p --input-format stream-json --output-format stream-json --verbose` reste vivant, accepte plusieurs messages `user` sur stdin, émet un `result` à la fin de chaque tour. Équivalent du mode RPC de pi. |
+| Streaming des deltas | `--include-partial-messages` émet des `stream_event` (`content_block_delta`), les messages `assistant` complets et les `user` de résultats d'outils. |
+| Identifiant de session choisi | `--session-id <uuid>` à la création, `--resume <uuid>` ensuite depuis le même cwd : l'historique est retrouvé (test : Claude a cité le premier message après reprise dans un nouveau process). |
+| Changement de modèle en session | `{"type":"control_request","request_id":"r1","request":{"subtype":"set_model","model":"sonnet"}}` répond `success` et un nouveau `system/init` porte le modèle effectif. |
+| Images | Bloc `{"type":"image","source":{"type":"base64","media_type":"image/png","data":"…"}}` dans le contenu du message utilisateur : Claude a identifié la couleur. |
+| Modèle courant | `system/init` expose `model` (identifiant complet), `session_id`, `permissionMode`, `apiKeySource` (`none` ici : connexion OAuth de l'abonnement). |
+| Fichiers de session | `~/.claude/projects/<cwd encodé>/<session-id>.jsonl`, cwd encodé en remplaçant les non alphanumériques par `-`. Entrées `user` et `assistant` avec `message.content` en blocs (`text`, `thinking`, `tool_use` avec `name` Bash/Edit/Write et `input.file_path`, `tool_result`), chaînées par `uuid`/`parentUuid`. Entrée `ai-title` générée automatiquement par Claude Code. |
+| Demandes de permission | Avec `--permission-prompt-tool stdio` et un `control_request` `initialize` envoyé au démarrage, une action non autorisée arrive sur stdout en `control_request` `can_use_tool` (outil, entrée, suggestions de règles). Sans ce flag, tout ce qui demanderait une confirmation est refusé automatiquement. |
+| Liste des modèles | Aucune commande ni message ne liste les modèles disponibles. Alias documentés : `default`, `best`, `fable`, `opus`, `sonnet`, `haiku`, identifiants complets, suffixe `[1m]` pour le contexte étendu. La liste sera déclarée côté serveur. |
+
+Points restants à vérifier en début de chantier, sans risque pour la faisabilité : forme exacte de la réponse `control_response` à `can_use_tool` (`behavior: allow | deny`), comportement d'un message `user` envoyé pendant qu'un tour est en cours (file d'attente ou rejet), et `control_request` `interrupt` pour l'arrêt.
+
+Réserves connues :
+- Le protocole stream-json et le format des fichiers de session sont qualifiés d'internes par la documentation et peuvent changer entre versions. Parade : un script `claude` factice dans `server/tests/fixtures`, comme pour pi, et des tests qui verrouillent les formes utilisées.
+- Chaque machine doit avoir Claude Code connecté (`claude` fonctionne dans un terminal). Le mode `--bare` n'est pas utilisable : il désactive l'authentification OAuth.
+- Les hooks et le CLAUDE.md global de l'utilisateur s'appliquent aux runs Claude Code. Comportement différent de pi : par exemple Claude Code ne commite pas de lui-même.
+
+### Architecture : un trait de backend dans le serveur
+
+Aujourd'hui `pi/manager.rs` mélange la gestion des tâches (baseline git, tours, diffusion WebSocket) et le décodage des événements pi. Le chantier sépare les deux.
+
+```
+trait Backend {
+    fn kind(&self) -> AgentKind;                       // pi | claude
+    async fn spawn(&self, task: &Task, model: Option<&ModelRef>) -> Result<Box<dyn AgentProcess>>;
+    fn session_file(&self, task: &Task) -> Option<PathBuf>;
+    fn read_transcript(&self, path: &Path) -> Result<Session>;   // tours normalisés
+    async fn list_models(&self, cwd: &Path) -> Result<Vec<ProviderModels>>;
+    async fn generate_title(&self, message: &str) -> Result<String>;
+}
+
+trait AgentProcess {
+    async fn prompt(&self, message: &str, images: &[ImageContent], queued: bool) -> Result<()>;
+    async fn abort(&self) -> Result<()>;
+    async fn set_model(&self, model: &ModelRef) -> Result<Model>;
+    async fn set_name(&self, name: &str) -> Result<()>;
+    async fn answer(&self, request_id: &str, answer: Value) -> Result<()>;  // permissions et questions
+    async fn kill(&self);
+}
+
+enum RunSignal {   // ce que le manager consomme, quel que soit le backend
+    Start, Status(String), TextDelta(String), ToolStart { name, path }, ToolEnd,
+    AssistantText { text, at, status }, Settled, Error(String),
+    Request { id, kind: Permission | Question, payload }, ModelChanged(Model),
+}
+```
+
+- `pi/adapter.rs` : traduit les événements RPC actuels en `RunSignal` (déplacement du `handle` existant, sans changement de comportement).
+- `claude/adapter.rs` : `system/init` → `ModelChanged` et enregistrement du modèle ; `stream_event` `content_block_delta` de type `text_delta` → `TextDelta` ; `assistant` avec `tool_use` → `ToolStart` (Bash → "Running a command…", Edit/Write → "Editing/Writing <file_path>…", Read → "Reading…") ; `assistant` avec `text` → `AssistantText` ; `result` → `Settled` (ou `Error` si `is_error`) ; `control_request` `can_use_tool` → `Request::Permission`.
+- `claude/session.rs` : lecteur du JSONL de Claude Code produisant les mêmes `Turn` que le lecteur pi (chaînage `parentUuid`, regroupement utilisateur / agent, fichiers touchés via `Edit`/`Write`). Le titre `ai-title` est ignoré : Sovereign garde son propre titre.
+- `claude/models.rs` : liste statique déclarée dans la config, modèle courant lu dans `init`.
+- Le manager (`Agents`) devient indépendant du backend : baseline git, tours, `touched_files`, arrêt après inactivité et WebSocket restent identiques. Les fichiers touchés viennent déjà de git, donc rien à adapter.
+
+### Données et API
+
+- `Task.agent: "pi" | "claude"`, absent = `pi` pour les tâches existantes. `Task.session_file` est renseigné à la création pour Claude Code à partir du cwd encodé.
+- Config :
+
+```toml
+[claude]
+bin = "claude"
+permission_mode = "bypassPermissions"   # ou acceptEdits, auto, manual
+models = ["fable", "opus", "sonnet", "haiku", "claude-fable-5-1[1m]"]
+```
+
+- `GET /models?repo=…` renvoie désormais des groupes : `{ agents: [{ agent: "pi", providers: [{ provider: "openai-codex", models: [...] }, …] }, { agent: "claude", providers: [{ provider: "anthropic", models: [...] }] }], current: … }`. Chaque modèle porte `agent`, `provider`, `id`, `name`, `input`.
+- `POST /tasks` accepte `model: { agent, provider, id }` ; l'agent de la tâche découle du modèle choisi (défaut : pi avec son modèle par défaut). `GET /tasks/:id/models` ne renvoie que les fournisseurs du backend de la tâche : on ne change pas d'agent en cours de tâche.
+- `POST /tasks/:id/ui-response` devient la réponse générique aux `Request` (permission Claude Code, question d'extension pi).
+- `GET /workspace` ajoute `agents: ["pi", "claude"]` selon les binaires trouvés et connectés, pour que la PWA n'affiche que ce qui marche sur la machine.
+
+### PWA
+
+- Sélecteur de modèles groupé : en-têtes "pi › openai-codex", "pi › my-local-vllm", "Claude Code › Anthropic", recherche conservée. Sur une nouvelle tâche, choisir un modèle sous "Claude Code" crée une tâche Claude Code. Sur une tâche existante, seuls les fournisseurs de son backend sont proposés.
+- Chip du composer : "gpt-6-astra" devient "pi · gpt-6-astra" ou "Claude · sonnet". Ligne méta des tâches : ajout de l'agent quand ce n'est pas pi.
+- Carte de demande dans le fil : titre de l'outil, commande ou fichier, boutons Allow et Deny, refus automatique après le délai côté serveur. Même carte pour les questions d'extension pi (phase 10 d'origine, enfin justifiée).
+- Titre : par backend, `pi -p` ou `claude -p --model haiku --no-session-persistence`, avec le titre provisoire en repli.
+
+### Phases
+
+| # | Phase | Livrable vérifiable |
+|---|---|---|
+| C0 | Trait `Backend` / `AgentProcess` / `RunSignal`, adaptateur pi extrait du manager, tests existants verts, comportement pi inchangé | run pi de bout en bout identique, `cargo test` vert |
+| C1 | `claude/process.rs` (spawn, JSONL, `initialize`, corrélation `control_response`), `claude/adapter.rs`, fixture `claude` factice | test d'intégration : prompt, deltas, settled avec le faux binaire |
+| C2 | `claude/session.rs`, `Task.agent`, création de tâche Claude, `session_file` calculé, reprise après redémarrage du serveur | tâche Claude créée par curl, transcript relu à froid |
+| C3 | Modèles groupés par agent et fournisseur, config `[claude]`, `set_model`, sélection à la création | `GET /models` renvoie les deux agents, changement de modèle en session vérifié |
+| C4 | Permissions : `--permission-prompt-tool stdio`, `Request::Permission`, refus après délai, `ui-response` | commande hors liste blanche → carte → Allow exécute, Deny refuse |
+| C5 | PWA : sélecteur groupé, badge agent, carte de demande, chip composer | captures mobile et desktop, run Claude Code suivi depuis la PWA |
+| C6 | Titre par backend, README, redéploiement Vercel et Rebuild Citadel | |
+
+Ordre de grandeur : serveur 800 à 1 000 lignes de Rust (dont 250 de déplacement pur en C0), PWA 250 à 300 lignes. C0 est la phase à risque puisqu'elle touche le chemin pi en production ; elle se vérifie avec le test de bout en bout existant. C4 dépend d'une forme de réponse non documentée, vérifiée en début de phase sur le vrai binaire.
