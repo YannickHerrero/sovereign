@@ -1,8 +1,19 @@
-# Sovereign — Landing page
+# Sovereign — Landing website
 
-App de présentation indépendante de `pwa/` et du serveur Rust. HTML statique, CSS et JavaScript léger, compilés avec Vite : le contenu est lisible sans JavaScript ; seuls les onglets et la copie des commandes en dépendent.
+A standalone product website, separate from `pwa/` and the Rust server. Static HTML, shared CSS, and a small JavaScript module, built with Vite. The content, FAQ, and language navigation work without JavaScript; feature tabs and clipboard copying use JavaScript.
 
-## Développement
+## Languages
+
+- **English (default):** `/` — `index.html`
+- **French:** `/fr/` — `fr/index.html`
+
+Both are real HTML entry points, not client-side translations. They share `src/style.css`, `src/main.js`, illustrations, and fonts. Keep their section IDs and layout structure aligned; tests compare the structure and executable installation commands across languages.
+
+The visible **EN / FR** navigation uses ordinary links and marks the current language. There is no browser-language redirect, cookie, or local-storage override: the URL determines the language, including on reload and when sharing links.
+
+Each page has its own title, description, canonical URL, Open Graph URL and locale. Reciprocal `hreflang` links cover `en`, `fr`, and `x-default` (English). `public/sitemap.xml` lists both pages and their language alternatives; `public/robots.txt` points to it. If the production domain changes, update the canonical/alternate URLs in both HTML documents, the sitemap, and robots.txt together.
+
+## Development
 
 ```sh
 cd landing
@@ -10,67 +21,70 @@ pnpm install
 pnpm dev
 ```
 
-Ouvrir http://localhost:5174 (port distinct de la PWA).
+Open http://localhost:5174 or http://localhost:5174/fr/ (a different port from the PWA).
 
 ```sh
-pnpm build                  # site statique dans dist/
-pnpm preview                # aperçu sur http://localhost:4174
-pnpm exec playwright install chromium  # une seule fois
-pnpm test:browser           # Chromium desktop + viewport mobile
+pnpm build                  # static site in dist/, including fr/index.html
+pnpm preview                # preview at http://localhost:4174
+pnpm exec playwright install chromium  # once
+pnpm test:browser           # both languages, desktop and mobile
 ```
 
-## Régénérer les captures de la PWA
+`vite.config.js` defines the two HTML inputs in multi-page mode. `vercel.json` enables trailing slashes so `/fr/` is the canonical French route. There is no SPA rewrite or locale redirect.
 
-Depuis la racine du dépôt :
+## Regenerate real PWA screenshots
+
+From the repository root:
 
 ```sh
 cd pwa
 pnpm install
-pnpm exec playwright install chromium  # une seule fois
+pnpm exec playwright install chromium  # once
 pnpm screenshots:landing
 ```
 
-Cette commande démarre la vraie PWA via Vite sur `127.0.0.1:4175`, puis Playwright ouvre ses routes normales. Les réponses HTTP et la connexion WebSocket sont interceptées ; seules les données et les machines sont fictives. Aucun serveur Rust, agent, secret ni modification des composants de production n’est nécessaire.
+This starts the real PWA with Vite on `127.0.0.1:4175`, then Playwright opens its normal routes. HTTP responses and the WebSocket connection are intercepted; only the data and machines are fictional. No Rust server, live agent, secret, or production component changes are needed.
 
-- `pwa/tests/landing/mock.ts` : machines, tâches, conversation et patches typés selon l’API de la PWA.
-- `pwa/tests/landing/capture.spec.ts` : navigation réelle, vérifications du chargement et captures PNG dans `landing/public/screenshots/`.
-- Conversation desktop : 1440 × 760 ; conversation mobile : 390 × 780 ; machines : 390 × 480 ; panneau diff desktop : 836 × 760, capturé directement depuis son élément DOM.
-- Date, fuseau horaire et viewport fixés, animations désactivées pour la capture. Le rendu des polices système peut varier selon l’OS ; régénérer sous le même environnement Chromium pour un rendu identique.
+- `pwa/tests/landing/mock.ts`: typed demo machines, tasks, conversations, and patches. English and French fixtures differ only in their display text. The PWA's own interface remains unchanged.
+- `pwa/tests/landing/capture.spec.ts`: actual navigation, loading assertions, and PNG capture into `landing/public/screenshots/`.
+- Files ending in `-en.png` contain English demo data. The original filenames contain French demo data.
+- Desktop conversation: 1440 × 760; mobile conversation: 390 × 780; workspaces: 390 × 480; desktop diff panel: 836 × 760, captured from its actual DOM element.
+- Fixed date, timezone, and viewport; animations disabled during capture. System fonts may render differently across operating systems, so use the same Chromium environment for reproducible output.
 
-Les quatre PNG sont versionnés : le build de la landing ne lance pas la PWA. Le hero utilise la capture mobile sur petit écran ; les captures des fonctionnalités s’ouvrent en taille réelle dans un nouvel onglet. Régénérer puis committer les images après une évolution de l’interface.
+The eight PNGs are versioned: building the website does not start the PWA. The hero selects the appropriate mobile capture on small screens; feature screenshots open at full size in a new tab. Regenerate and commit the images after interface changes. The root README uses the English desktop capture.
 
-## Déploiement
+## Deployment
 
-Production : **https://sovereign-landing-chi.vercel.app**.
+Production: **https://sovereign-landing-chi.vercel.app/** (English) and **https://sovereign-landing-chi.vercel.app/fr/** (French).
 
-Projet Vercel : `sovereign-landing`, relié au dépôt GitHub avec `landing` comme Root Directory et Node.js 24.x. Il est distinct du projet `sovereign` qui héberge la PWA.
+The `sovereign-landing` Vercel project is connected to GitHub with `landing` as its Root Directory and Node.js 24.x. It is separate from the `sovereign` project hosting the PWA.
 
-Pour republier via la CLI, exécuter **depuis la racine du dépôt**, pas depuis `landing/` :
+To deploy through the CLI, run **from the repository root**, not from `landing/`:
 
 ```sh
-vercel link --yes --project sovereign-landing --scope <votre-equipe-vercel>
-vercel deploy --prod --yes --scope <votre-equipe-vercel>
+vercel link --yes --project sovereign-landing --scope <your-vercel-team>
+vercel deploy --prod --yes --scope <your-vercel-team>
 ```
 
-`landing/vercel.json` fixe les commandes et le dossier de sortie. Le `.vercelignore` à la racine limite les envois CLI à la landing, sans les dépendances locales, les builds, les secrets ni les autres apps. Les fichiers `.vercel/` et `.env.local` créés par Vercel restent ignorés par Git.
+`landing/vercel.json` specifies the commands and output directory. The root `.vercelignore` limits CLI uploads to the website, excluding local dependencies, builds, secrets, and other apps. Vercel's `.vercel/` and `.env.local` files stay ignored by Git.
 
-Déployer `landing/` comme un projet séparé sur un hébergeur statique (Vercel, Netlify, etc.) :
+For a separate static-hosting project (Vercel, Netlify, etc.):
 
-- répertoire racine : `landing`
-- installation : `pnpm install --frozen-lockfile`
-- build : `pnpm build`
-- dossier publié : `dist`
+- Root directory: `landing`
+- Install: `pnpm install --frozen-lockfile`
+- Build: `pnpm build`
+- Publish directory: `dist`
 
-Aucune variable d’environnement, aucun backend, aucun compte utilisateur ni outil de suivi. La landing n’est pas embarquée dans le serveur et ne change pas le déploiement de la PWA.
+No environment variables, backend, user accounts, tracking, or external font requests. The website is not embedded in the Rust server and does not change the PWA's deployment.
 
-## Contenu et visuels
+## Content and assets
 
-Présenter Sovereign comme une console indépendante du harness. Distinguer le support **disponible** (pi et Claude Code) des intégrations **prévues, non disponibles** (Codex et OpenCode). Les noms d’outils dans les captures et les explications techniques décrivent une intégration précise, pas une restriction du produit à cet outil.
+Present Sovereign as harness-agnostic. Distinguish **available** integrations (pi and Claude Code) from **planned, unavailable** integrations (Codex and OpenCode). Tool names in screenshots or technical explanations describe an integration, not a restriction of the product to that tool.
 
-- `index.html` : texte français, métadonnées, liens vers le dépôt et exemples produit. Les aperçus sont de vraies captures de la PWA avec des données fictives, pas une console connectée.
-- `src/style.css` : mise en page responsive et styles.
-- `src/main.js` : onglets accessibles au clavier (flèches, Début, Fin) et copie des commandes avec message de repli.
-- `public/landscape.svg` et `public/favicon.svg` : illustrations originales. La direction visuelle s’inspire de Multica (paysage immersif, typographie serif, aperçu produit), sans reprendre ses images ni son identité.
-- `public/fonts/` : DM Sans et Instrument Serif, issues de [Google Fonts](https://github.com/google/fonts), auto-hébergées avec leurs licences SIL Open Font License. Aucune requête vers un service de polices externe.
+- `index.html` and `fr/index.html`: localized content, metadata, accessibility labels, image descriptions, installation comments, and clipboard status messages (`data-success` / `data-error` on `#copy-status`). Update both when product behavior changes.
+- `src/style.css`: shared responsive layout, including the language selector on mobile.
+- `src/main.js`: keyboard-accessible feature tabs (arrow keys, Home, End) and command copying with a localized fallback.
+- `public/landscape.svg` and `public/favicon.svg`: original illustrations. The visual direction is inspired by Multica (immersive landscape, serif typography, product previews), without copying its images or identity.
+- `public/fonts/`: self-hosted DM Sans and Instrument Serif from [Google Fonts](https://github.com/google/fonts), with their SIL Open Font Licenses.
 
-Les CTA mènent aux instructions réelles d’installation, pas à une inscription ou à une offre hébergée inexistante. Mettre à jour le texte et les commandes si les prérequis du produit changent.
+CTAs point to real installation instructions, not a nonexistent signup flow or hosted plan. Both languages link to the English README's `#build-and-installation` section. Keep examples and screenshot data fictional, and preserve the security caveats in both languages.

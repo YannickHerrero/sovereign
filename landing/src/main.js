@@ -34,9 +34,8 @@ copyButton.addEventListener("click", async () => {
     await navigator.clipboard.writeText(
       document.getElementById("install-commands").textContent,
     );
-    copyStatus.textContent = "Commandes copiées.";
+    copyStatus.textContent = copyStatus.dataset.success;
   } catch {
-    copyStatus.textContent =
-      "Copie indisponible. Sélectionnez les commandes pour les copier manuellement.";
+    copyStatus.textContent = copyStatus.dataset.error;
   }
 });

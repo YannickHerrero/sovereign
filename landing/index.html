@@ -1,71 +1,117 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#173e42" />
     <meta
       name="description"
-      content="Pilotez vos agents de développement sur vos machines depuis votre téléphone ou votre bureau. Sovereign, la console auto-hébergée indépendante du harness. Aujourd’hui compatible avec pi et Claude Code."
+      content="Control your coding agents on your own machines, from mobile or desktop. Sovereign is a self-hosted, harness-agnostic console. Supports pi and Claude Code today."
     />
     <meta
       property="og:title"
-      content="Sovereign — Vos agents au travail. Vous, où vous voulez."
+      content="Sovereign — Your agents at work. You, anywhere."
     />
     <meta
       property="og:description"
-      content="La console auto-hébergée, mobile et desktop, pour vos agents de développement. Indépendante du harness, compatible aujourd’hui avec pi et Claude Code."
+      content="Your coding agents, your machines, one console. Self-hosted and harness-agnostic, with pi and Claude Code support today."
     />
     <meta property="og:type" content="website" />
-    <title>Sovereign — Vos agents au travail. Vous, où vous voulez.</title>
+    <meta
+      property="og:image"
+      content="https://sovereign-landing-chi.vercel.app/screenshots/desktop-conversation-en.png"
+    />
+    <meta property="og:image:width" content="1440" />
+    <meta property="og:image:height" content="760" />
+    <meta
+      property="og:image:alt"
+      content="Sovereign’s desktop console with fictional tasks and demo machines."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      property="og:url"
+      content="https://sovereign-landing-chi.vercel.app/"
+    />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:locale:alternate" content="fr_FR" />
+    <link rel="canonical" href="https://sovereign-landing-chi.vercel.app/" />
+    <link
+      rel="alternate"
+      hreflang="en"
+      href="https://sovereign-landing-chi.vercel.app/"
+    />
+    <link
+      rel="alternate"
+      hreflang="fr"
+      href="https://sovereign-landing-chi.vercel.app/fr/"
+    />
+    <link
+      rel="alternate"
+      hreflang="x-default"
+      href="https://sovereign-landing-chi.vercel.app/"
+    />
+    <title>Sovereign — Your agents at work. You, anywhere.</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/src/style.css" />
     <script type="module" src="/src/main.js"></script>
   </head>
   <body>
-    <a class="skip-link" href="#main">Aller au contenu</a>
+    <a class="skip-link" href="#main">Skip to content</a>
     <header class="header container">
-      <a class="brand" href="#" aria-label="Sovereign, accueil"
+      <a class="brand" href="/" aria-label="Sovereign, home"
         ><svg viewBox="0 0 32 32" aria-hidden="true">
           <path d="m3 25 9-18 6 12 5-8 7 14H3Z" /></svg
         >sovereign<span class="brand-dot">.</span></a
       >
-      <nav aria-label="Navigation principale">
-        <a href="#produit">Le produit</a><a href="#installation">Installation</a
+      <nav class="primary-nav" aria-label="Main navigation">
+        <a href="#produit">Product</a><a href="#installation">Installation</a
         ><a href="#faq">FAQ</a>
       </nav>
-      <a class="nav-cta" href="https://github.com/YannickHerrero/sovereign"
-        >Voir sur GitHub <span aria-hidden="true">↗</span></a
-      >
+      <div class="header-actions">
+        <nav class="language-switch" aria-label="Language">
+          <a
+            href="/"
+            lang="en"
+            hreflang="en"
+            aria-label="English"
+            aria-current="page"
+            >EN</a
+          >
+          <a href="/fr/" lang="fr" hreflang="fr" aria-label="Français">FR</a>
+        </nav>
+        <a class="nav-cta" href="https://github.com/YannickHerrero/sovereign"
+          >GitHub <span aria-hidden="true">↗</span></a
+        >
+      </div>
     </header>
     <main id="main">
       <div class="hero-wrap">
         <section class="hero container" aria-labelledby="hero-title">
           <p class="eyebrow hero-label">
-            <span class="status-dot"></span> Vos machines. Vos agents. Votre
-            liberté.
+            <span class="status-dot"></span> Your machines. Your agents. Your
+            freedom.
           </p>
           <h1 id="hero-title">
-            Vos agents au travail.<br />Vous, <em>où vous voulez.</em>
+            Your agents at work.<br />You, <em>anywhere.</em>
           </h1>
           <p class="hero-description">
-            Lancez une idée. Suivez le code. Gardez la main.<br
+            Start with an idea. Follow the code. Stay in control.<br
               class="desktop-break"
             />
-            La console mobile pour piloter vos agents de développement,<br
+            The mobile console for your coding agents,<br
               class="desktop-break"
             />
-            sans rester devant votre terminal.
+            without being tied to your terminal.
           </p>
           <div class="actions">
             <a class="button button-light" href="#installation"
-              >Installer Sovereign <span aria-hidden="true">↗</span></a
+              >Install Sovereign <span aria-hidden="true">↗</span></a
             ><a class="button button-glass" href="#produit"
-              >Découvrir le produit <span aria-hidden="true">↓</span></a
+              >Explore the product <span aria-hidden="true">↓</span></a
             >
           </div>
           <div class="compatibility">
-            <span>Disponibles aujourd’hui</span
+            <span>Available today</span
             ><strong><span aria-hidden="true">π</span> pi</strong
             ><strong
               ><span class="claude-symbol" aria-hidden="true">✳</span> Claude
@@ -74,23 +120,23 @@
           </div>
           <figure class="product-preview">
             <figcaption class="preview-top">
-              <span class="window-dots" aria-hidden="true">● ● ●</span>
-              <span>La vraie interface · données de démonstration</span>
-              <span class="demo-label">CAPTURE PWA</span>
+              <span class="window-dots" aria-hidden="true">● ● ●</span
+              ><span>The real interface · demo data</span
+              ><span class="demo-label">PWA CAPTURE</span>
             </figcaption>
             <picture>
               <source
                 media="(max-width: 700px)"
-                srcset="/screenshots/mobile-conversation.png"
+                srcset="/screenshots/mobile-conversation-en.png"
                 width="390"
                 height="780"
               />
               <img
-                src="/screenshots/desktop-conversation.png"
+                src="/screenshots/desktop-conversation-en.png"
                 width="1440"
                 height="760"
                 fetchpriority="high"
-                alt="Sovereign : conversation avec pi sur le mode sombre, fichiers modifiés, tâches par projet et machines connectées. Capture de la PWA avec des données fictives."
+                alt="Sovereign: a conversation with pi about dark mode, changed files, tasks by project, and connected machines. Real PWA screenshot with fictional data."
               />
             </picture>
           </figure>
@@ -98,8 +144,8 @@
       </div>
       <div class="foundation">
         <div class="container foundation-inner">
-          <span>Moins de terminal.<br /><strong>Plus de liberté.</strong></span
-          ><span>Auto-hébergé</span><span>Multi-machines</span
+          <span>Less terminal.<br /><strong>More freedom.</strong></span
+          ><span>Self-hosted</span><span>Multi-machine</span
           ><span>Mobile & desktop</span><span>Harness-agnostic</span>
         </div>
       </div>
@@ -110,22 +156,18 @@
       >
         <div class="section-heading">
           <div>
-            <p class="eyebrow">VOTRE TERMINAL PREND LE LARGE</p>
+            <p class="eyebrow">TAKE YOUR TERMINAL FURTHER</p>
             <h2 id="product-title">
-              Votre environnement.<br /><em>Sans les quatre murs.</em>
+              Your environment.<br /><em>Without the four walls.</em>
             </h2>
           </div>
           <p>
-            Votre environnement de développement reste là où il est. Sovereign
-            vous donne la liberté de le piloter autrement, avec une interface
-            commune indépendante du harness.
+            Your development environment stays right where it is. Sovereign
+            gives you the freedom to control it differently, with one interface
+            independent of the harness.
           </p>
         </div>
-        <div
-          class="feature-switcher"
-          role="tablist"
-          aria-label="Fonctionnalités"
-        >
+        <div class="feature-switcher" role="tablist" aria-label="Features">
           <button
             id="tab-remote"
             role="tab"
@@ -133,23 +175,25 @@
             aria-controls="panel-remote"
             tabindex="0"
           >
-            01 <span>Pilotez à distance</span></button
-          ><button
+            01 <span>Work from anywhere</span>
+          </button>
+          <button
             id="tab-machines"
             role="tab"
             aria-selected="false"
             aria-controls="panel-machines"
             tabindex="-1"
           >
-            02 <span>Retrouvez vos machines</span></button
-          ><button
+            02 <span>Connect your machines</span>
+          </button>
+          <button
             id="tab-review"
             role="tab"
             aria-selected="false"
             aria-controls="panel-review"
             tabindex="-1"
           >
-            03 <span>Gardez le contrôle</span>
+            03 <span>Stay in control</span>
           </button>
         </div>
         <div
@@ -160,41 +204,37 @@
         >
           <div class="feature-copy">
             <span class="feature-icon" aria-hidden="true">↗</span>
-            <h3>Une idée n’attend pas<br />le retour au bureau.</h3>
+            <h3>Ideas don’t wait<br />until you’re back at your desk.</h3>
             <p>
-              Depuis votre téléphone, choisissez un repo et lancez une tâche.
-              Suivez les réponses en direct et poursuivez la conversation, où
-              que vous soyez.
+              Pick a repo and start a task from your phone. Follow responses as
+              they arrive and keep the conversation going, wherever you are.
             </p>
             <ul>
-              <li>Une PWA à ajouter à votre écran d’accueil</li>
-              <li>Du texte, des images ou la dictée vocale</li>
-              <li>Vos sessions conservées dans vos outils</li>
+              <li>A PWA you can add to your home screen</li>
+              <li>Send text, images, or use voice dictation</li>
+              <li>Your sessions stay in your own tools</li>
             </ul>
             <a class="text-link" href="#installation"
-              >Emportez votre workspace <span aria-hidden="true">↗</span></a
+              >Take your workspace with you <span aria-hidden="true">↗</span></a
             >
           </div>
           <div class="feature-art phone-art">
             <span class="orbit orbit-one"></span
-            ><span class="orbit orbit-two"></span>
-            <a
+            ><span class="orbit orbit-two"></span
+            ><a
               class="screenshot-link phone"
-              href="/screenshots/mobile-conversation.png"
+              href="/screenshots/mobile-conversation-en.png"
               target="_blank"
               rel="noopener"
-              aria-label="Agrandir la capture de la conversation mobile (nouvel onglet)"
-            >
-              <img
-                src="/screenshots/mobile-conversation.png"
+              aria-label="Enlarge the mobile conversation screenshot (new tab)"
+              ><img
+                src="/screenshots/mobile-conversation-en.png"
                 width="390"
                 height="780"
                 loading="lazy"
-                alt="La vraie conversation mobile : réponse de pi, fichiers modifiés et bouton View diff. Données fictives."
-              />
-            </a>
-            <span class="art-caption"
-              >Capture PWA · données fictives · cliquer pour agrandir ↗</span
+                alt="The real mobile conversation: pi’s response, changed files, and the View diff button. Fictional data." /></a
+            ><span class="art-caption"
+              >PWA screenshot · fictional data · click to enlarge ↗</span
             >
           </div>
         </div>
@@ -207,39 +247,36 @@
         >
           <div class="feature-copy">
             <span class="feature-icon" aria-hidden="true">⌘</span>
-            <h3>Plusieurs machines.<br />Un seul point de vue.</h3>
+            <h3>Multiple machines.<br />One place to check in.</h3>
             <p>
-              Votre laptop, votre serveur maison, votre station de travail.
-              Ajoutez chaque machine avec son URL et son token, puis retrouvez
-              ses repos et ses tâches.
+              Your laptop, home server, or workstation. Add each machine with
+              its URL and access token, then find its repos and tasks in one
+              place.
             </p>
             <ul>
-              <li>Un serveur Sovereign par machine</li>
-              <li>Un accès distant via Tailscale</li>
-              <li>Le choix de l’agent à la création de la tâche</li>
+              <li>One Sovereign server per machine</li>
+              <li>Remote access through Tailscale</li>
+              <li>Choose the agent when creating a task</li>
             </ul>
             <a class="text-link" href="#installation"
-              >Connecter vos machines <span aria-hidden="true">↗</span></a
+              >Connect your machines <span aria-hidden="true">↗</span></a
             >
           </div>
           <div class="feature-art machines-art">
             <a
               class="screenshot-link workspace-screenshot"
-              href="/screenshots/mobile-workspaces.png"
+              href="/screenshots/mobile-workspaces-en.png"
               target="_blank"
               rel="noopener"
-              aria-label="Agrandir la capture des machines (nouvel onglet)"
-            >
-              <img
-                src="/screenshots/mobile-workspaces.png"
+              aria-label="Enlarge the workspaces screenshot (new tab)"
+              ><img
+                src="/screenshots/mobile-workspaces-en.png"
                 width="390"
                 height="480"
                 loading="lazy"
-                alt="L’écran Workspaces de Sovereign avec deux machines en ligne, leurs agents actifs et une station hors ligne. Données fictives."
-              />
-            </a>
-            <span class="art-caption"
-              >Capture PWA · données fictives · cliquer pour agrandir ↗</span
+                alt="Sovereign’s Workspaces screen with two online machines, their running agents, and one offline machine. Fictional data." /></a
+            ><span class="art-caption"
+              >PWA screenshot · fictional data · click to enlarge ↗</span
             >
           </div>
         </div>
@@ -252,39 +289,35 @@
         >
           <div class="feature-copy">
             <span class="feature-icon" aria-hidden="true">±</span>
-            <h3>Laissez l’agent coder.<br />Gardez le dernier regard.</h3>
+            <h3>Let the agent code.<br />Keep the final say.</h3>
             <p>
-              Lisez les réponses en streaming, arrêtez une exécution si
-              nécessaire et inspectez les changements dans une vue diff dédiée
-              sur grand écran.
+              Read responses as they stream in, stop a run if you need to, and
+              inspect changes in a dedicated diff view on desktop.
             </p>
             <ul>
-              <li>Diff unifié ou côte à côte</li>
-              <li>Coloration syntaxique et filtre par fichier</li>
-              <li>Fichiers marqués comme relus, par tâche</li>
+              <li>Unified or side-by-side diffs</li>
+              <li>Syntax highlighting and file filtering</li>
+              <li>Mark files as reviewed for each task</li>
             </ul>
             <a class="text-link" href="#installation"
-              >Reprendre la main <span aria-hidden="true">↗</span></a
+              >Stay in control <span aria-hidden="true">↗</span></a
             >
           </div>
           <div class="feature-art review-art">
             <a
               class="screenshot-link diff-screenshot"
-              href="/screenshots/desktop-diff.png"
+              href="/screenshots/desktop-diff-en.png"
               target="_blank"
               rel="noopener"
-              aria-label="Agrandir la capture du diff (nouvel onglet)"
-            >
-              <img
-                src="/screenshots/desktop-diff.png"
+              aria-label="Enlarge the diff screenshot (new tab)"
+              ><img
+                src="/screenshots/desktop-diff-en.png"
                 width="836"
                 height="760"
                 loading="lazy"
-                alt="La vraie vue diff desktop : arborescence, ajouts et suppressions colorés, numéros de ligne et cases Viewed. Données fictives."
-              />
-            </a>
-            <span class="art-caption"
-              >Capture PWA · données fictives · cliquer pour agrandir ↗</span
+                alt="The real desktop diff view: file tree, highlighted additions and deletions, line numbers, and Viewed checkboxes. Fictional data." /></a
+            ><span class="art-caption"
+              >PWA screenshot · fictional data · click to enlarge ↗</span
             >
           </div>
         </div>
@@ -292,19 +325,18 @@
       <section class="ownership">
         <div class="container ownership-inner">
           <div>
-            <p class="eyebrow">CHEZ VOUS, POUR DE VRAI</p>
-            <h2>Votre code ne déménage pas.<br /><em>Vous, si.</em></h2>
+            <p class="eyebrow">ON YOUR MACHINES. REALLY.</p>
+            <h2>Your code stays put.<br /><em>You don’t have to.</em></h2>
           </div>
           <div class="ownership-copy">
             <p>
-              Sovereign tourne sur vos machines, pas sur un service hébergé
-              intermédiaire. Vos agents utilisent votre environnement et leurs
-              fournisseurs de modèles habituels.
+              Sovereign runs on your machines, not through a hosted middleman.
+              Your agents use your environment and their usual model providers.
             </p>
             <div class="ownership-points">
-              <span>↳ Un serveur Rust léger</span
-              ><span>↳ Un accès privé via Tailscale</span
-              ><span>↳ Vos outils et vos comptes existants</span>
+              <span>↳ A lightweight Rust server</span
+              ><span>↳ Private access through Tailscale</span
+              ><span>↳ Your existing tools and accounts</span>
             </div>
           </div>
         </div>
@@ -316,13 +348,13 @@
       >
         <div class="section-heading">
           <div>
-            <p class="eyebrow">DU TERMINAL À VOTRE POCHE</p>
-            <h2 id="install-title">À vous de <em>prendre le large.</em></h2>
+            <p class="eyebrow">FROM YOUR TERMINAL TO YOUR POCKET</p>
+            <h2 id="install-title">Ready to <em>take it with you?</em></h2>
           </div>
           <a
             class="text-link"
-            href="https://github.com/YannickHerrero/sovereign#build-et-installation"
-            >Le guide complet <span aria-hidden="true">↗</span></a
+            href="https://github.com/YannickHerrero/sovereign#build-and-installation"
+            >The complete guide <span aria-hidden="true">↗</span></a
           >
         </div>
         <div class="install-grid">
@@ -330,32 +362,31 @@
             <article>
               <span>01</span>
               <div>
-                <h3>Préparez votre machine</h3>
+                <h3>Prepare your machine</h3>
                 <p>
-                  Un harness compatible installé et authentifié — pi ou Claude
-                  Code aujourd’hui —, Rust, Node.js, pnpm et Tailscale. Tout
-                  part de votre environnement.
+                  Install and authenticate a supported harness — pi or Claude
+                  Code today — plus Rust, Node.js, pnpm, and Tailscale. Start
+                  with your own environment.
                 </p>
               </div>
             </article>
             <article>
               <span>02</span>
               <div>
-                <h3>Installez Sovereign</h3>
+                <h3>Install Sovereign</h3>
                 <p>
-                  Compilez la PWA, puis le serveur. Au premier lancement, un
-                  token d’accès est créé dans votre configuration locale.
+                  Build the PWA, then the server. On first launch, an access
+                  token is created in your local configuration.
                 </p>
               </div>
             </article>
             <article>
               <span>03</span>
               <div>
-                <h3>Connectez votre téléphone</h3>
+                <h3>Connect your phone</h3>
                 <p>
-                  Exposez le serveur avec Tailscale Serve. Ouvrez son URL HTTPS,
-                  ajoutez la PWA à l’écran d’accueil et configurez votre
-                  machine.
+                  Expose the server with Tailscale Serve. Open its HTTPS URL,
+                  add the PWA to your home screen, and configure your machine.
                 </p>
               </div>
             </article>
@@ -366,26 +397,32 @@
               ><button
                 id="copy-install"
                 type="button"
-                aria-label="Copier les commandes d’installation"
+                aria-label="Copy installation commands"
               >
-                Copier <span aria-hidden="true">⧉</span>
+                Copy <span aria-hidden="true">⧉</span>
               </button>
             </div>
-            <pre><code id="install-commands"><span class="terminal-comment"># Récupérer le projet</span>
+            <pre><code id="install-commands"><span class="terminal-comment"># Get the project</span>
 git clone https://github.com/YannickHerrero/sovereign.git
 cd sovereign
 
-<span class="terminal-comment"># Compiler l’interface et installer le serveur</span>
+<span class="terminal-comment"># Build the interface and install the server</span>
 cd pwa && pnpm install && pnpm build
 cd ../server && cargo install --path .
 
-<span class="terminal-comment"># Démarrer sur cette machine</span>
+<span class="terminal-comment"># Start on this machine</span>
 sovereign-server</code></pre>
             <div class="terminal-note">
-              <span class="status-dot"></span> Puis, dans un autre terminal :
+              <span class="status-dot"></span> Then, in another terminal:
               <code>tailscale serve --bg 7777</code>
             </div>
-            <p id="copy-status" class="copy-status" role="status"></p>
+            <p
+              id="copy-status"
+              class="copy-status"
+              role="status"
+              data-success="Commands copied."
+              data-error="Clipboard unavailable. Select the commands to copy them manually."
+            ></p>
           </div>
         </div>
       </section>
@@ -395,87 +432,84 @@ sovereign-server</code></pre>
         aria-labelledby="faq-title"
       >
         <div>
-          <p class="eyebrow">BON À SAVOIR</p>
-          <h2 id="faq-title">Quelques<br /><em>réponses.</em></h2>
+          <p class="eyebrow">GOOD TO KNOW</p>
+          <h2 id="faq-title">A few<br /><em>answers.</em></h2>
         </div>
         <div class="faq-list">
           <details>
-            <summary>Quels agents puis-je utiliser ?</summary>
+            <summary>Which coding agents can I use?</summary>
             <p>
-              Sovereign est indépendant du harness, l’outil qui exécute votre
-              agent. Aujourd’hui, pi et Claude Code sont pris en charge ; un
-              seul des deux suffit. Codex et OpenCode sont prévus, mais pas
-              encore disponibles. Chaque intégration nécessite un adaptateur. Le
-              serveur détecte les outils compatibles installés au démarrage.
-              Choisissez le harness via le modèle lors de la création d’une
-              tâche ; il reste ensuite associé à cette tâche.
+              Sovereign is independent of the harness, the tool that runs your
+              agent. pi and Claude Code are supported today; you only need one
+              of them. Codex and OpenCode are planned, but not yet available.
+              Each integration requires an adapter. The server detects
+              compatible tools at startup. Choose the harness through the model
+              when creating a task; it stays associated with that task.
             </p>
           </details>
           <details>
-            <summary>Est-ce uniquement pour le téléphone ?</summary>
+            <summary>Is it just for phones?</summary>
             <p>
-              Non. L’interface s’adapte aussi au desktop, avec une liste de
-              tâches par date ou projet, un mode pleine largeur et une vue diff
-              pour relire les changements. Sur mobile, elle s’installe comme une
-              PWA.
+              No. The interface also works on desktop, with tasks grouped by
+              date or project, a full-width mode, and a diff view for reviewing
+              changes. On mobile, you can install it as a PWA.
             </p>
           </details>
           <details>
-            <summary>Où s’exécutent mes agents et où va mon code ?</summary>
+            <summary>
+              Where do my agents run, and where does my code go?
+            </summary>
             <p>
-              Les agents s’exécutent sur vos machines. Sovereign ne fournit pas
-              de relais cloud. Vos agents continuent toutefois à transmettre le
-              contexte nécessaire à leurs fournisseurs de modèles, selon leur
-              configuration. La dictée optionnelle utilise OpenAI.
+              Agents run on your machines. Sovereign does not provide a cloud
+              relay. Your agents still send the context they need to their model
+              providers, according to their configuration. Optional voice
+              dictation uses OpenAI.
             </p>
           </details>
           <details>
-            <summary>Comment sécuriser l’accès à distance ?</summary>
+            <summary>How do I secure remote access?</summary>
             <p>
-              Le serveur écoute sur localhost par défaut et exige un token
-              d’accès. Tailscale Serve fournit l’accès HTTPS au sein de votre
-              réseau Tailscale. Gardez votre token secret et n’exposez pas
-              directement le serveur sur Internet.
+              The server listens on localhost by default and requires an access
+              token. Tailscale Serve provides HTTPS access within your Tailscale
+              network. Keep your token secret and do not expose the server
+              directly to the Internet.
             </p>
           </details>
           <details>
-            <summary>Les agents demandent-ils des permissions ?</summary>
+            <summary>Do agents ask for permission?</summary>
             <p>
-              Claude Code est lancé en mode bypassPermissions : il ne demande
-              pas de confirmation avant ses actions. Utilisez Sovereign
-              uniquement sur des repos et des machines de confiance, et relisez
-              les modifications. Le comportement de pi dépend de votre
-              configuration.
+              Claude Code runs in bypassPermissions mode: it does not ask for
+              confirmation before taking action. Only use Sovereign with trusted
+              repos and machines, and review the changes. pi’s behavior depends
+              on your configuration.
             </p>
           </details>
           <details>
-            <summary>Faut-il un abonnement supplémentaire ?</summary>
+            <summary>Do I need another subscription?</summary>
             <p>
-              Sovereign se compile et s’héberge sur votre infrastructure, sans
-              compte Sovereign. Vous conservez les coûts éventuels de vos
-              fournisseurs de modèles et de vos services existants. Consultez le
-              dépôt pour les instructions d’installation.
+              You build and self-host Sovereign on your own infrastructure,
+              without a Sovereign account. Any costs from your model providers
+              and existing services still apply. See the repository for
+              installation instructions.
             </p>
           </details>
         </div>
       </section>
       <section class="final-cta">
         <div class="container">
-          <p class="eyebrow">LE CODE AVANCE. LA VIE AUSSI.</p>
-          <h2>
-            Votre prochaine idée<br />peut venir <em>de n’importe où.</em>
-          </h2>
+          <p class="eyebrow">CODE MOVES FORWARD. SO DOES LIFE.</p>
+          <h2>Your next idea<br />can come <em>from anywhere.</em></h2>
           <a class="button button-light" href="#installation"
-            >Installer Sovereign <span aria-hidden="true">↗</span></a
+            >Install Sovereign <span aria-hidden="true">↗</span></a
           >
-          <p>Auto-hébergé. Conçu pour vos agents. Pensé pour vous.</p>
+          <p>Self-hosted. Built for your agents. Designed for you.</p>
         </div>
       </section>
     </main>
     <footer class="container footer">
       <a class="brand" href="#">sovereign<span class="brand-dot">.</span></a
-      ><span>Gardez la main. Prenez le large.</span>
-      <nav aria-label="Liens du pied de page">
+      ><span>Stay in control. Go further.</span>
+      <nav aria-label="Footer links">
         <a href="https://github.com/YannickHerrero/sovereign#readme"
           >Documentation ↗</a
         ><a href="https://github.com/YannickHerrero/sovereign">GitHub ↗</a>

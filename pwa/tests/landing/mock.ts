@@ -92,19 +92,40 @@ export const tasks: TaskSummary[] = [
 ];
 
 /** The real app talks only to these intercepted demo hosts, never to a server or agent. */
-export async function mockProduct(page: Page) {
+export async function mockProduct(page: Page, locale: 'en' | 'fr' = 'fr') {
+  const names = locale === 'en'
+    ? ['Demo workspace', 'Test server', 'Sandbox']
+    : ['Machine de démo', 'Serveur de test', 'Bac à sable'];
+  const titles: Record<string, string> = {
+    'dark-mode': 'Add dark mode',
+    navigation: 'Improve mobile navigation',
+    checkout: 'Simplify the checkout flow',
+    tokens: 'Unify component spacing',
+    buttons: 'Document the components',
+  };
+  const demoTask: TaskDetail = locale === 'fr' ? task : {
+    ...task,
+    title: titles[task.id]!,
+    turns: task.turns.map((turn) => ({
+      ...turn,
+      text: turn.role === 'user'
+        ? 'Add a dark mode that follows system preferences and remembers my choice.'
+        : 'Dark mode is ready.\n\n### A theme that follows your preferences\n\n- Automatically detects the system theme.\n- Saves your choice for the next visit.\n- Adapts the colors without changing the layout.\n\nAll **8 tests pass**, including theme persistence. You can review the changes in the diff.',
+    })),
+  };
+  const demoTasks = locale === 'fr' ? tasks : tasks.map((summary) => ({ ...summary, title: titles[summary.id]! }));
   const unexpected: string[] = [];
   await page.clock.setFixedTime(now);
-  await page.addInitScript(({ now }) => {
+  await page.addInitScript(({ now, names }) => {
     localStorage.setItem('sovereign.settings.v1', JSON.stringify({
       openaiKey: '',
       servers: [
-        { id: 'dev-machine', name: 'Machine de démo', url: 'https://dev-machine.demo.invalid', token: 'demo-not-a-secret', lastSeen: now },
-        { id: 'test-server', name: 'Serveur de test', url: 'https://test-server.demo.invalid', token: 'demo-not-a-secret', lastSeen: now },
-        { id: 'sandbox', name: 'Bac à sable', url: 'https://sandbox.demo.invalid', token: 'demo-not-a-secret', lastSeen: now - 7_200_000 },
+        { id: 'dev-machine', name: names[0], url: 'https://dev-machine.demo.invalid', token: 'demo-not-a-secret', lastSeen: now },
+        { id: 'test-server', name: names[1], url: 'https://test-server.demo.invalid', token: 'demo-not-a-secret', lastSeen: now },
+        { id: 'sandbox', name: names[2], url: 'https://sandbox.demo.invalid', token: 'demo-not-a-secret', lastSeen: now - 7_200_000 },
       ],
     }));
-  }, { now });
+  }, { now, names });
   await page.routeWebSocket(/\/api\/ws\?/, () => {
     // Keep the feed open but idle; the captured task is already settled.
   });
@@ -124,14 +145,14 @@ export async function mockProduct(page: Page) {
     if (path === '/api/workspace') {
       if (url.hostname.startsWith('sandbox.')) return route.fulfill({ status: 503, json: { error: 'Demo machine offline' } });
       const workspace: Workspace = {
-        name: url.hostname.startsWith('dev-machine.') ? 'Machine de démo' : 'Serveur de test',
+        name: url.hostname.startsWith('dev-machine.') ? names[0]! : names[1]!,
         version: '0.1.0', uptime_secs: 86400, agents_running: url.hostname.startsWith('dev-machine.') ? 1 : 2,
         agents: ['pi', 'claude'],
       };
       return route.fulfill({ json: workspace });
     }
-    if (path === '/api/tasks') return route.fulfill({ json: tasks });
-    if (path === '/api/tasks/dark-mode') return route.fulfill({ json: task });
+    if (path === '/api/tasks') return route.fulfill({ json: demoTasks });
+    if (path === '/api/tasks/dark-mode') return route.fulfill({ json: demoTask });
     if (path === '/api/tasks/dark-mode/diff') {
       const selected = url.searchParams.get('path');
       const result = selected ? files.filter((file) => file.path === selected) : files;
