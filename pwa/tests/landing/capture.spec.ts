@@ -14,37 +14,45 @@ async function capture(page: Page, name: string, region?: Locator) {
   else await page.screenshot(options);
 }
 
-test('capture the real desktop conversation and diff', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 760 });
-  const unexpected = await mockProduct(page);
-  await page.goto('/w/dev-machine/t/dark-mode');
-  await expect(page.locator('.markdown')).toContainText('8 tests passent');
-  await expect(page.locator('.sidebar')).toContainText('Offline');
-  await page.getByRole('radio', { name: 'Project', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'New task in design-system', exact: true })).toBeVisible();
-  await capture(page, 'desktop-conversation');
+for (const locale of ['en', 'fr'] as const) {
+  test.describe(locale, () => {
+    test.use({ locale: locale === 'en' ? 'en-GB' : 'fr-FR' });
+    const filename = (name: string) => locale === 'en' ? `${name}-en` : name;
+    const reply = locale === 'en' ? '8 tests pass' : '8 tests passent';
 
-  // Use the actual navigation and lazy diff API, not a standalone component fixture.
-  await page.getByRole('button', { name: /View diff/ }).click();
-  await expect(page.getByRole('radiogroup', { name: 'Diff layout' })).toBeVisible();
-  await expect(page.locator('.blocks')).toContainText('getTheme');
-  await expect(page.locator('.blocks .placeholder')).toHaveCount(0);
-  await capture(page, 'desktop-diff', page.locator('.view'));
-  expect(unexpected).toEqual([]);
-});
+    test('capture the real desktop conversation and diff', async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 760 });
+      const unexpected = await mockProduct(page, locale);
+      await page.goto('/w/dev-machine/t/dark-mode');
+      await expect(page.locator('.markdown')).toContainText(reply);
+      await expect(page.locator('.sidebar')).toContainText('Offline');
+      await page.getByRole('radio', { name: 'Project', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'New task in design-system', exact: true })).toBeVisible();
+      await capture(page, filename('desktop-conversation'));
 
-test('capture the real mobile conversation and workspace list', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 780 });
-  const unexpected = await mockProduct(page);
-  await page.goto('/w/dev-machine/t/dark-mode');
-  await expect(page.locator('.markdown')).toContainText('8 tests passent');
-  await capture(page, 'mobile-conversation');
+      // Use actual navigation and the lazy diff API, not a standalone component fixture.
+      await page.getByRole('button', { name: /View diff/ }).click();
+      await expect(page.getByRole('radiogroup', { name: 'Diff layout' })).toBeVisible();
+      await expect(page.locator('.blocks')).toContainText('getTheme');
+      await expect(page.locator('.blocks .placeholder')).toHaveCount(0);
+      await capture(page, filename('desktop-diff'), page.locator('.view'));
+      expect(unexpected).toEqual([]);
+    });
 
-  await page.setViewportSize({ width: 390, height: 480 });
-  await page.goto('/');
-  await expect(page.getByText('Choose a machine to work on')).toBeVisible();
-  await expect(page.getByText('Online', { exact: true })).toHaveCount(2);
-  await expect(page.getByText('Offline', { exact: true })).toBeVisible();
-  await capture(page, 'mobile-workspaces');
-  expect(unexpected).toEqual([]);
-});
+    test('capture the real mobile conversation and workspace list', async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 780 });
+      const unexpected = await mockProduct(page, locale);
+      await page.goto('/w/dev-machine/t/dark-mode');
+      await expect(page.locator('.markdown')).toContainText(reply);
+      await capture(page, filename('mobile-conversation'));
+
+      await page.setViewportSize({ width: 390, height: 480 });
+      await page.goto('/');
+      await expect(page.getByText('Choose a machine to work on')).toBeVisible();
+      await expect(page.getByText('Online', { exact: true })).toHaveCount(2);
+      await expect(page.getByText('Offline', { exact: true })).toBeVisible();
+      await capture(page, filename('mobile-workspaces'));
+      expect(unexpected).toEqual([]);
+    });
+  });
+}
