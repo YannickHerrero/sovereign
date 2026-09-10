@@ -5,7 +5,6 @@
   import { ChatSession } from '../../lib/chat.svelte';
   import { router } from '../../lib/router.svelte';
   import type { WorkspaceStore } from '../../lib/workspace.svelte';
-  import DiffPanel from './DiffPanel.svelte';
 
   let { store, taskId, onModel }: { store: WorkspaceStore; taskId: string; onModel: (model: string | null) => void } = $props();
 
@@ -22,7 +21,6 @@
   $effect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      if (session.diffOpen) session.closeDiff();
       menuOpen = false;
     };
     window.addEventListener('keydown', onKey);
@@ -57,7 +55,7 @@
     <div class="task-title">{summary?.title ?? ''}</div>
     <div class="meta">{summary ? `${summary.repo}${session.detail?.branch ? ` · ${session.detail.branch}` : ''}` : ''}</div>
     {#if session.touched.length}
-      <button class="chip" onclick={() => session.openDiff()}>
+      <button class="chip" onclick={() => router.go({ name: 'diff', wsId: store.server.id, taskId })}>
         <span>View diff</span>
         <span class="plus">+{session.totalPlus}</span>
         <span class="minus">-{session.totalMinus}</span>
@@ -89,16 +87,13 @@
     model={session.detail?.model}
     agent={summary?.agent}
     captureTyping
-    typingBlocked={() => menuOpen || session.diffOpen}
+    typingBlocked={() => menuOpen}
     loadModels={() => session.models()}
     onModelChange={(model) => session.changeModel(model)}
     modelDisabled={session.working}
     onSubmit={(text, images) => session.send(text, images)}
   />
 
-  {#if session.diffOpen}
-    <DiffPanel files={session.diffFiles} loading={session.diffLoading} onClose={() => session.closeDiff()} />
-  {/if}
 </div>
 
 <style>

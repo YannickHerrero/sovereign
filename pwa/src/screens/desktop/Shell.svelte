@@ -9,11 +9,12 @@
   import Sidebar from './Sidebar.svelte';
   import TaskList from './TaskList.svelte';
   import TaskPane from './TaskPane.svelte';
+  import DiffView from './diff/DiffView.svelte';
 
   const route = $derived(router.route);
   const wsId = $derived('wsId' in route ? route.wsId : (settings.servers[0]?.id ?? undefined));
   const store = $derived(wsId ? workspaceStore(wsId) : undefined);
-  const taskId = $derived(route.name === 'chat' ? route.taskId : undefined);
+  const taskId = $derived(route.name === 'chat' || route.name === 'diff' ? route.taskId : undefined);
 
   let filter = $state<Filter>(FILTERS[0]);
   let model = $state<string | null>(null);
@@ -40,6 +41,10 @@
     <section class="column settings">
       <Settings embedded />
     </section>
+  {:else if store && taskId && route.name === 'diff'}
+    {#key taskId}
+      <DiffView {store} {taskId} />
+    {/key}
   {:else if store && taskId}
     {#key taskId}
       <TaskPane {store} {taskId} onModel={(m) => (model = m)} />

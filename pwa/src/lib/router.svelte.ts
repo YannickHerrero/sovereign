@@ -2,13 +2,17 @@ export type Route =
   | { name: 'workspaces' }
   | { name: 'tasks'; wsId: string }
   | { name: 'chat'; wsId: string; taskId: string }
+  | { name: 'diff'; wsId: string; taskId: string }
   | { name: 'settings' };
 
 function parse(pathname: string): Route {
   const parts = pathname.split('/').filter(Boolean);
   if (parts[0] === 'settings') return { name: 'settings' };
   if (parts[0] === 'w' && parts[1]) {
-    if (parts[2] === 't' && parts[3]) return { name: 'chat', wsId: parts[1], taskId: parts[3] };
+    if (parts[2] === 't' && parts[3]) {
+      if (parts[4] === 'diff') return { name: 'diff', wsId: parts[1], taskId: parts[3] };
+      return { name: 'chat', wsId: parts[1], taskId: parts[3] };
+    }
     return { name: 'tasks', wsId: parts[1] };
   }
   return { name: 'workspaces' };
@@ -24,6 +28,8 @@ export function pathOf(route: Route): string {
       return `/w/${route.wsId}`;
     case 'chat':
       return `/w/${route.wsId}/t/${route.taskId}`;
+    case 'diff':
+      return `/w/${route.wsId}/t/${route.taskId}/diff`;
   }
 }
 
