@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '../../../components/Icon.svelte';
   import { contextLines, gapBefore, parsePatch, type DiffLine, type Hunk } from '../../../lib/diff/parse';
+  import { highlighterFor, languageFor, plain, type LineHighlighter } from '../../../lib/diff/highlight';
   import { splitRows } from '../../../lib/diff/sideBySide';
   import type { DiffMode } from '../../../lib/diff/viewed.svelte';
   import type { FileDiff } from '../../../lib/types';
@@ -20,6 +21,17 @@
 
   const parsed = $derived(parsePatch(file.patch));
   let collapsed = $state(false);
+  let hl = $state<LineHighlighter>(plain);
+
+  $effect(() => {
+    let cancelled = false;
+    void highlighterFor(languageFor(file.path)).then((h) => {
+      if (!cancelled && h) hl = h;
+    });
+    return () => {
+      cancelled = true;
+    };
+  });
   let fileLines = $state<string[] | null>(null);
   let loadError = $state<string | null>(null);
   /** Context lines already revealed before each hunk index (index = hunks.length for the tail). */
@@ -93,14 +105,14 @@
     <span class="no">{line.oldNo ?? ''}</span>
     <span class="no">{line.newNo ?? ''}</span>
     <span class="sign">{line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ''}</span>
-    <span class="code">{line.text || ' '}</span>
+    <span class="code">{@html hl.line(line.text) || ' '}</span>
   </div>
 {/snippet}
 
 {#snippet cell(line: DiffLine | null)}
   <span class="no">{line ? (line.kind === 'add' ? line.newNo : line.oldNo) : ''}</span>
   <span class="sign">{line?.kind === 'add' ? '+' : line?.kind === 'del' ? '-' : ''}</span>
-  <span class="code">{line ? line.text || ' ' : ''}</span>
+  <span class="code">{@html line ? hl.line(line.text) || ' ' : ''}</span>
 {/snippet}
 
 {#snippet expander(section: Section)}
@@ -358,5 +370,41 @@
   }
   .exp.all {
     color: var(--muted-2);
+  }
+  /* Token colors, kept quiet to sit on the add/del tints. */
+  .code :global(.hljs-keyword),
+  .code :global(.hljs-selector-tag),
+  .code :global(.hljs-built_in),
+  .code :global(.hljs-type) {
+    color: #7a5aa8;
+  }
+  .code :global(.hljs-string),
+  .code :global(.hljs-attr),
+  .code :global(.hljs-symbol),
+  .code :global(.hljs-regexp) {
+    color: #2e7d55;
+  }
+  .code :global(.hljs-number),
+  .code :global(.hljs-literal) {
+    color: #b0611f;
+  }
+  .code :global(.hljs-comment),
+  .code :global(.hljs-quote) {
+    color: var(--muted-2);
+    font-style: italic;
+  }
+  .code :global(.hljs-title),
+  .code :global(.hljs-name),
+  .code :global(.hljs-section) {
+    color: #2c6fbb;
+  }
+  .code :global(.hljs-variable),
+  .code :global(.hljs-template-variable),
+  .code :global(.hljs-property) {
+    color: #8a4b6b;
+  }
+  .code :global(.hljs-meta),
+  .code :global(.hljs-tag) {
+    color: #5b6f8f;
   }
 </style>
