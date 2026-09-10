@@ -6,6 +6,10 @@ pwa/node_modules/
 pwa/dist/
 pwa/test-results/
 pwa/playwright-report/
+landing/node_modules/
+landing/dist/
+landing/test-results/
+landing/playwright-report/
 *.log
 
 # Editors / OS

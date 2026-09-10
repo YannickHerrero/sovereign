@@ -1,0 +1,4 @@
+# Exact optional OpenHarmony binding selected by Vite/Rolldown's lockfile.
+# pnpm added this exception when resolving the dependencies.
+minimumReleaseAgeExclude:
+  - "@rolldown/binding-openharmony-arm64@1.2.8"
