@@ -2,6 +2,12 @@
 
 Console mobile pour piloter des sessions [pi](https://github.com/badlogic/pi-mono) à distance.
 
+**[Découvrir Sovereign — site de présentation](https://sovereign-landing-chi.vercel.app)**
+
+![Sovereign sur desktop : conversation avec un agent, tâches par projet et machines de démonstration](landing/public/screenshots/desktop-conversation.png)
+
+*Capture de la vraie PWA réalisée avec Playwright, avec des données et des machines fictives.*
+
 - `server/` : serveur Rust, un par machine. Gère les sessions pi, expose une API HTTP + WebSocket, sert la PWA.
 - `pwa/` : interface mobile (Svelte 5, Vite), embarquée dans le binaire du serveur.
 - `landing/` : site de présentation du produit (HTML/CSS/JS, Vite), déployable indépendamment. Voir [son README](landing/README.md).
