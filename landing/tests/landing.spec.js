@@ -108,6 +108,32 @@ test("feature tabs work by pointer and keyboard", async ({ page }) => {
   await expect(remote).toHaveAttribute("aria-selected", "true");
 });
 
+test("distinguishes harness-agnostic positioning from available integrations", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    /indépendante du harness/,
+  );
+  await expect(page.locator(".compatibility")).toContainText(
+    "Disponibles aujourd’hui",
+  );
+  await expect(page.locator(".compatibility")).toContainText("pi");
+  await expect(page.locator(".compatibility")).toContainText("Claude Code");
+  await expect(page.locator(".compatibility")).not.toContainText("Codex");
+  await expect(page.locator(".compatibility")).not.toContainText("OpenCode");
+  await page
+    .locator("summary", { hasText: "Quels agents puis-je utiliser ?" })
+    .click();
+  await expect(page.locator("details[open]")).toContainText(
+    "pi et Claude Code sont pris en charge",
+  );
+  await expect(page.locator("details[open]")).toContainText(
+    "Codex et OpenCode sont prévus, mais pas encore disponibles",
+  );
+});
+
 test("FAQ exposes the security and permission caveats", async ({ page }) => {
   await page.goto("/");
   const question = page.locator("summary", {
