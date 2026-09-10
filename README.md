@@ -9,7 +9,7 @@ Voir [PLAN.md](PLAN.md) pour l'architecture et les phases.
 
 ## Prérequis sur chaque machine
 
-- `pi` installé et authentifié (`pi` fonctionne dans un terminal).
+- `pi` installé et authentifié (`pi` fonctionne dans un terminal), ou Claude Code connecté (`claude` fonctionne dans un terminal). Le serveur détecte les deux au démarrage et n'en exige qu'un.
 - Rust (cargo) pour compiler le serveur, Node + pnpm pour compiler la PWA.
 - Tailscale pour l'accès depuis le téléphone.
 
@@ -35,7 +35,14 @@ token = "..."             # à saisir dans la PWA
 repos_root = "~/dev"      # chaque sous-dossier est un repo proposé à la création d'une tâche
 pi_bin = "pi"
 idle_kill_secs = 600      # arrêt d'un process pi inactif
+
+[claude]
+bin = "claude"
+# Claude Code ne sait pas lister ses modèles : la liste proposée est déclarée ici.
+models = ["fable", "opus", "sonnet", "haiku", "claude-fable-5-1[1m]"]
 ```
+
+Claude Code tourne toujours en mode `bypassPermissions`, sans aucune demande de permission. Ses sessions sont lues dans `~/.claude/projects/`. L'agent d'une tâche est choisi à la création via le modèle sélectionné (chaque modèle porte un tag pi ou Claude Code) et ne change plus ensuite.
 
 Le serveur refuse de démarrer si le token configuré est vide ou ne contient que des espaces. Conserver le token généré ou le remplacer par un secret fort ; ne pas utiliser la valeur d’exemple `"..."`.
 

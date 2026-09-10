@@ -352,3 +352,5 @@ Décisions prises le 10 septembre 2026 : Claude Code tourne toujours en `--permi
 | C6 | Titre par backend, README, redéploiement Vercel et Rebuild Citadel | |
 
 Ordre de grandeur : serveur 800 à 1 000 lignes de Rust (dont 250 de déplacement pur en C0), PWA 250 à 300 lignes. C0 est la phase à risque puisqu'elle touche le chemin pi en production ; elle se vérifie avec le test de bout en bout existant. C4 côté Claude Code dépend d'un comportement non reproduit sur la version installée ; le reste du chantier n'en dépend pas.
+
+État au 10 septembre 2026 : C0 à C6 livrées. Vérifié : comportement pi inchangé (test de bout en bout), tâche Claude Code créée avec un modèle choisi, streaming, stats, diff, transcript relu à froid, changement de modèle en session, liste de modèles à plat taguée par agent et fournisseur, cartes de questions (choix, confirmation, saisie) pilotées par une extension pi réelle. Le spike AskUserQuestion côté Claude Code reste ouvert : le mécanisme est câblé (normalisation et réponse `updatedInput.answers`) mais la CLI 2.1.267 n'émet pas la requête.
