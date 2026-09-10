@@ -267,7 +267,8 @@ Tests réalisés en ligne de commande depuis un dépôt bac à sable :
 | Images | Bloc `{"type":"image","source":{"type":"base64","media_type":"image/png","data":"…"}}` dans le contenu du message utilisateur : Claude a identifié la couleur. |
 | Modèle courant | `system/init` expose `model` (identifiant complet), `session_id`, `permissionMode`, `apiKeySource` (`none` ici : connexion OAuth de l'abonnement). |
 | Fichiers de session | `~/.claude/projects/<cwd encodé>/<session-id>.jsonl`, cwd encodé en remplaçant les non alphanumériques par `-`. Entrées `user` et `assistant` avec `message.content` en blocs (`text`, `thinking`, `tool_use` avec `name` Bash/Edit/Write et `input.file_path`, `tool_result`), chaînées par `uuid`/`parentUuid`. Entrée `ai-title` générée automatiquement par Claude Code. |
-| Demandes de permission | Avec `--permission-prompt-tool stdio` et un `control_request` `initialize` envoyé au démarrage, une action non autorisée arrive sur stdout en `control_request` `can_use_tool` (outil, entrée, suggestions de règles). Sans ce flag, tout ce qui demanderait une confirmation est refusé automatiquement. |
+| Demandes de permission | Avec `--permission-prompt-tool stdio` et un `control_request` `initialize` envoyé au démarrage, une action non autorisée arrive sur stdout en `control_request` `can_use_tool` (outil, entrée, suggestions de règles). Sans ce flag, tout ce qui demanderait une confirmation est refusé automatiquement. Non utilisé : Claude Code tourne en `bypassPermissions`, 100 % autonome comme pi. |
+| Questions (AskUserQuestion) | Sans outil de prompt, l'outil est retiré du contexte : Claude ne peut pas poser de QCM et formule ses questions en texte en fin de tour. Avec l'outil de prompt stdio, l'outil est disponible et appelé, mais aucune requête n'est émise sur stdout et le process attend indéfiniment (testé en modes bypass, manual et acceptEdits, avec et sans poignée de main `initialize`, journal de debug à l'appui). La documentation dit pourtant que la question doit remonter comme une permission. Comportement de la version 2.1.267 à considérer comme bloquant pour l'instant. |
 | Liste des modèles | Aucune commande ni message ne liste les modèles disponibles. Alias documentés : `default`, `best`, `fable`, `opus`, `sonnet`, `haiku`, identifiants complets, suffixe `[1m]` pour le contexte étendu. La liste sera déclarée côté serveur. |
 
 Points restants à vérifier en début de chantier, sans risque pour la faisabilité : forme exacte de la réponse `control_response` à `can_use_tool` (`behavior: allow | deny`), comportement d'un message `user` envoyé pendant qu'un tour est en cours (file d'attente ou rejet), et `control_request` `interrupt` pour l'arrêt.
@@ -321,20 +322,21 @@ enum RunSignal {   // ce que le manager consomme, quel que soit le backend
 ```toml
 [claude]
 bin = "claude"
-permission_mode = "bypassPermissions"   # ou acceptEdits, auto, manual
 models = ["fable", "opus", "sonnet", "haiku", "claude-fable-5-1[1m]"]
 ```
 
-- `GET /models?repo=…` renvoie désormais des groupes : `{ agents: [{ agent: "pi", providers: [{ provider: "openai-codex", models: [...] }, …] }, { agent: "claude", providers: [{ provider: "anthropic", models: [...] }] }], current: … }`. Chaque modèle porte `agent`, `provider`, `id`, `name`, `input`.
+Décisions prises le 10 septembre 2026 : Claude Code tourne toujours en `--permission-mode bypassPermissions`, sans outil de prompt, donc sans aucune demande de permission. La liste de modèles Claude vient de la config serveur. Le sélecteur affiche tous les modèles à plat avec un tag de fournisseur, pas de groupes.
+
+- `GET /models?repo=…` renvoie une liste à plat : `{ models: [{ agent, provider, id, name, input }], current }`. Pour pi, `provider` vient de son registre (`openai-codex`, `my-local-vllm`, …) ; pour Claude Code, `provider` vaut `anthropic` et `agent` vaut `claude`. Le tag affiché combine les deux quand c'est utile ("pi · openai-codex", "Claude Code").
 - `POST /tasks` accepte `model: { agent, provider, id }` ; l'agent de la tâche découle du modèle choisi (défaut : pi avec son modèle par défaut). `GET /tasks/:id/models` ne renvoie que les fournisseurs du backend de la tâche : on ne change pas d'agent en cours de tâche.
 - `POST /tasks/:id/ui-response` devient la réponse générique aux `Request` (permission Claude Code, question d'extension pi).
 - `GET /workspace` ajoute `agents: ["pi", "claude"]` selon les binaires trouvés et connectés, pour que la PWA n'affiche que ce qui marche sur la machine.
 
 ### PWA
 
-- Sélecteur de modèles groupé : en-têtes "pi › openai-codex", "pi › my-local-vllm", "Claude Code › Anthropic", recherche conservée. Sur une nouvelle tâche, choisir un modèle sous "Claude Code" crée une tâche Claude Code. Sur une tâche existante, seuls les fournisseurs de son backend sont proposés.
+- Sélecteur de modèles à plat : une ligne par modèle avec le nom et un tag de fournisseur (pilule discrète : "openai-codex", "vllm", "Claude Code"), recherche conservée, modèle courant marqué. Sur une nouvelle tâche, choisir un modèle tagué Claude Code crée une tâche Claude Code. Sur une tâche existante, seuls les modèles de son backend sont proposés.
 - Chip du composer : "gpt-6-astra" devient "pi · gpt-6-astra" ou "Claude · sonnet". Ligne méta des tâches : ajout de l'agent quand ce n'est pas pi.
-- Carte de demande dans le fil : titre de l'outil, commande ou fichier, boutons Allow et Deny, refus automatique après le délai côté serveur. Même carte pour les questions d'extension pi (phase 10 d'origine, enfin justifiée).
+- Questions de l'agent, famille de cartes dans le fil, rendues par le même composant quel que soit le backend : choix unique, choix multiple, confirmation oui / non, saisie libre courte, saisie longue. Plusieurs questions dans une même demande s'enchaînent dans la carte avec un en-tête court par question, et un champ "Autre" libre accompagne les QCM. Utilisée dès la v1 pour les requêtes d'extension pi (`select`, `confirm`, `input`, `editor`), et prête pour AskUserQuestion le jour où Claude Code transmet la question sur stdio (format documenté : `questions[]` avec `question`, `header`, `options[{label, description}]`, `multiSelect` ; réponse `behavior: allow` avec `updatedInput.answers` indexé par texte de question). En attendant, Claude Code pose ses questions en texte et l'utilisateur répond par un follow-up.
 - Titre : par backend, `pi -p` ou `claude -p --model haiku --no-session-persistence`, avec le titre provisoire en repli.
 
 ### Phases
@@ -345,8 +347,8 @@ models = ["fable", "opus", "sonnet", "haiku", "claude-fable-5-1[1m]"]
 | C1 | `claude/process.rs` (spawn, JSONL, `initialize`, corrélation `control_response`), `claude/adapter.rs`, fixture `claude` factice | test d'intégration : prompt, deltas, settled avec le faux binaire |
 | C2 | `claude/session.rs`, `Task.agent`, création de tâche Claude, `session_file` calculé, reprise après redémarrage du serveur | tâche Claude créée par curl, transcript relu à froid |
 | C3 | Modèles groupés par agent et fournisseur, config `[claude]`, `set_model`, sélection à la création | `GET /models` renvoie les deux agents, changement de modèle en session vérifié |
-| C4 | Permissions : `--permission-prompt-tool stdio`, `Request::Permission`, refus après délai, `ui-response` | commande hors liste blanche → carte → Allow exécute, Deny refuse |
+| C4 | Cartes de questions génériques (choix unique, multiple, confirmation, saisie) branchées sur les requêtes d'extension pi via `ui-response`. Spike limité à deux heures pour faire remonter AskUserQuestion de Claude Code sur stdio (comparer avec ce que fait l'Agent SDK TypeScript) ; si concluant, branchement de la même carte | question pi → carte → réponse reçue par l'extension |
 | C5 | PWA : sélecteur groupé, badge agent, carte de demande, chip composer | captures mobile et desktop, run Claude Code suivi depuis la PWA |
 | C6 | Titre par backend, README, redéploiement Vercel et Rebuild Citadel | |
 
-Ordre de grandeur : serveur 800 à 1 000 lignes de Rust (dont 250 de déplacement pur en C0), PWA 250 à 300 lignes. C0 est la phase à risque puisqu'elle touche le chemin pi en production ; elle se vérifie avec le test de bout en bout existant. C4 dépend d'une forme de réponse non documentée, vérifiée en début de phase sur le vrai binaire.
+Ordre de grandeur : serveur 800 à 1 000 lignes de Rust (dont 250 de déplacement pur en C0), PWA 250 à 300 lignes. C0 est la phase à risque puisqu'elle touche le chemin pi en production ; elle se vérifie avec le test de bout en bout existant. C4 côté Claude Code dépend d'un comportement non reproduit sur la version installée ; le reste du chantier n'en dépend pas.
