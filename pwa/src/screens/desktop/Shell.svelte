@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CommandPaletteTrigger from '../../components/CommandPaletteTrigger.svelte';
   import { layout } from '../../lib/layout.svelte';
   import { router } from '../../lib/router.svelte';
   import { settings } from '../../lib/settings.svelte';
@@ -30,7 +31,7 @@
 </script>
 
 <div class="shell" class:sidebar-collapsed={layout.sidebarCollapsed}>
-  <Sidebar {onSearch} {store} {filter} onFilter={(f) => (filter = f)} {model}
+  <Sidebar {store} {filter} onFilter={(f) => (filter = f)} {model}
     collapsed={layout.sidebarCollapsed} onToggle={() => layout.toggleSidebar()} />
 
   {#if store}
@@ -41,22 +42,23 @@
 
   {#if route.name === 'settings'}
     <section class="column settings">
-      <Settings embedded />
+      <Settings embedded {onSearch} />
     </section>
   {:else if store && taskId && route.name === 'diff'}
     {#key `${store.server.id}/${taskId}`}
-      <DiffView {store} {taskId} />
+      <DiffView {store} {taskId} {onSearch} />
     {/key}
   {:else if store && taskId}
     {#key `${store.server.id}/${taskId}`}
-      <TaskPane {store} {taskId} onModel={(m) => (model = m)} />
+      <TaskPane {store} {taskId} {onSearch} onModel={(m) => (model = m)} />
     {/key}
   {:else if store}
     {#key store.server.id}
-      <NewTaskPane {store} />
+      <NewTaskPane {store} {onSearch} />
     {/key}
   {:else}
     <section class="column welcome">
+      <header class="welcome-header"><span>Sovereign</span><CommandPaletteTrigger {onSearch} /></header>
       <div>
         <div class="welcome-title">No machine configured</div>
         <p>Add a Sovereign server in Settings to start working.</p>
@@ -67,6 +69,7 @@
 </div>
 
 <style>
+  .welcome-header { position: absolute; top: 0; inset-inline: 0; height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px; border-bottom: 1px solid rgba(0, 0, 0, .05); font-size: 13.5px; font-weight: 500; color: var(--ink); }
   .shell {
     display: grid;
     grid-template-columns: 252px 352px minmax(0, 1fr);

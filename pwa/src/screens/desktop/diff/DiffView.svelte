@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import CommandPaletteTrigger from '../../../components/CommandPaletteTrigger.svelte';
   import Icon from '../../../components/Icon.svelte';
   import { api } from '../../../lib/api';
   import { diffPrefs } from '../../../lib/diff/viewed.svelte';
@@ -10,7 +11,7 @@
   import FileBlock from './FileBlock.svelte';
   import FileTree from './FileTree.svelte';
 
-  let { store, taskId }: { store: WorkspaceStore; taskId: string } = $props();
+  let { store, taskId, onSearch }: { store: WorkspaceStore; taskId: string; onSearch: () => void } = $props();
 
   let files = $state<FileDiff[]>([]);
   let loading = $state(true);
@@ -120,6 +121,7 @@
       <div class="title">{task?.title ?? 'Changes'}</div>
       <div class="sub">{task?.repo ?? ''}{files.length ? ` · ${files.length} ${files.length === 1 ? 'file' : 'files'}` : ''}</div>
     </div>
+    <CommandPaletteTrigger {onSearch} />
     {#if files.length}
       <span class="stats"><span class="plus">+{totalPlus}</span><span class="minus">-{totalMinus}</span></span>
     {/if}

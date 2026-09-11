@@ -1,11 +1,12 @@
 <script lang="ts">
+  import CommandPaletteTrigger from '../components/CommandPaletteTrigger.svelte';
   import Icon from '../components/Icon.svelte';
   import { api } from '../lib/api';
   import { router } from '../lib/router.svelte';
   import { settings } from '../lib/settings.svelte';
 
   /** Rendered inside the desktop shell: no back button, content centered. */
-  let { embedded = false }: { embedded?: boolean } = $props();
+  let { embedded = false, onSearch }: { embedded?: boolean; onSearch?: () => void } = $props();
 
   let name = $state('');
   let url = $state('');
@@ -51,7 +52,9 @@
 </script>
 
 <div class="screen" class:screen--slide={!embedded} class:embedded>
-  {#if !embedded}
+  {#if embedded && onSearch}
+    <header class="desktop-header"><span>Settings</span><CommandPaletteTrigger {onSearch} /></header>
+  {:else if !embedded}
     <div class="topbar">
       <button class="round round--filled" aria-label="Back" onclick={() => router.back({ name: 'workspaces' })}>
         <Icon name="back" color="var(--ink-icon)" />
@@ -104,6 +107,7 @@
 </div>
 
 <style>
+  .desktop-header { height: 44px; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px; border-bottom: 1px solid rgba(0, 0, 0, .05); font-size: 13.5px; font-weight: 500; }
   .embedded {
     background: #fbfaf8;
   }

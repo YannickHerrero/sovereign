@@ -14,10 +14,9 @@
     model: string | null;
     collapsed: boolean;
     onToggle: () => void;
-    onSearch: () => void;
   }
 
-  let { store, filter, onFilter, model, collapsed, onToggle, onSearch }: Props = $props();
+  let { store, filter, onFilter, model, collapsed, onToggle }: Props = $props();
 
   const route = $derived(router.route);
   const activeWs = $derived('wsId' in route ? route.wsId : undefined);
@@ -40,10 +39,6 @@
       <Icon name={collapsed ? 'forward' : 'back'} color="var(--ink-control)" />
     </button>
   </div>
-
-  <button class="palette-trigger" aria-label="Search discussions and machines" title="Search (Ctrl+K / ⌘K)" onclick={onSearch}>
-    {#if collapsed}⌕{:else}Search <kbd>{navigator.platform.includes('Mac') ? '⌘K' : 'Ctrl K'}</kbd>{/if}
-  </button>
 
   <div id="workspace-navigation" hidden={collapsed}>
   <div class="section">Workspaces</div>
@@ -93,8 +88,6 @@
 </aside>
 
 <style>
-  .palette-trigger { display: flex; justify-content: space-between; align-items: center; margin: 6px 10px; padding: 8px; border-radius: 8px; background: var(--press); color: var(--muted-2); font-size: 13px; }
-  kbd { font: inherit; font-size: 11px; }
   .sidebar {
     display: flex;
     flex-direction: column;

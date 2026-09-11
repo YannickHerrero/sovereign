@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import CommandPaletteTrigger from '../../components/CommandPaletteTrigger.svelte';
   import DockedComposer from '../../components/DockedComposer.svelte';
   import { api } from '../../lib/api';
   import { prefs } from '../../lib/prefs.svelte';
@@ -7,7 +8,7 @@
   import type { ImageContent, PiModel, Repo } from '../../lib/types';
   import type { WorkspaceStore } from '../../lib/workspace.svelte';
 
-  let { store }: { store: WorkspaceStore } = $props();
+  let { store, onSearch }: { store: WorkspaceStore; onSearch: () => void } = $props();
 
   let repos = $state<Repo[]>([]);
   let repo = $state('');
@@ -71,6 +72,7 @@
 <div class="pane">
   <div class="head">
     <div class="task-title">New task</div>
+    <CommandPaletteTrigger {onSearch} />
     <div class="meta">{store.server.name}</div>
   </div>
   <div class="body">

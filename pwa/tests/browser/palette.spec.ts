@@ -181,6 +181,30 @@ test('new discussion opens the composer and settings works without a host', asyn
   await expect(page).toHaveURL(/\/settings$/);
 });
 
+test('desktop trigger lives in the current pane header, never the sidebar', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Desktop header placement');
+  const trigger = page.getByRole('button', { name: 'Search discussions and machines', exact: true });
+  for (const path of ['/w/local/t/one', '/w/local/new', '/w/local/t/one/diff', '/settings']) {
+    await page.goto(path);
+    await expect(trigger).toHaveCount(1);
+    await expect(trigger).toBeVisible();
+    await expect(page.locator('.sidebar').getByRole('button', { name: 'Search discussions and machines' })).toHaveCount(0);
+    expect(await trigger.evaluate((el) => Boolean(el.closest('.head, header')))).toBe(true);
+    await trigger.click();
+    await expect(page.getByRole('combobox', { name: 'Search discussions and machines' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(trigger).toBeFocused();
+  }
+  await page.goto('/w/local/t/one');
+  await page.getByRole('button', { name: 'Collapse workspaces sidebar' }).click();
+  await expect(trigger).toBeVisible();
+  const screenshot = testInfo.outputPath('command-center-header.png');
+  await page.screenshot({ path: screenshot });
+  await testInfo.attach('command-center-header', { path: screenshot, contentType: 'image/png' });
+  await trigger.click();
+  await expect(page.getByRole('combobox')).toBeFocused();
+});
+
 test('compact palette design stays within the viewport and keeps long rows on one line', async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.keyboard.press('Control+k');

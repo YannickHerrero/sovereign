@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CommandPaletteTrigger from '../../components/CommandPaletteTrigger.svelte';
   import DockedComposer from '../../components/DockedComposer.svelte';
   import Icon from '../../components/Icon.svelte';
   import Thread from '../../components/Thread.svelte';
@@ -7,7 +8,7 @@
   import { router } from '../../lib/router.svelte';
   import type { WorkspaceStore } from '../../lib/workspace.svelte';
 
-  let { store, taskId, onModel }: { store: WorkspaceStore; taskId: string; onModel: (model: string | null) => void } = $props();
+  let { store, taskId, onModel, onSearch }: { store: WorkspaceStore; taskId: string; onModel: (model: string | null) => void; onSearch: () => void } = $props();
 
   // The parent keys this component by task id, so a session per instance is intended.
   // svelte-ignore state_referenced_locally
@@ -54,6 +55,7 @@
 <div class="pane">
   <div class="head">
     <div class="task-title">{summary?.title ?? ''}</div>
+    <CommandPaletteTrigger {onSearch} />
     <div class="meta">{summary ? `${summary.repo}${session.detail?.branch ? ` · ${session.detail.branch}` : ''}` : ''}</div>
     {#if session.touched.length}
       <button class="chip" onclick={() => router.go({ name: 'diff', wsId: store.server.id, taskId })}>
