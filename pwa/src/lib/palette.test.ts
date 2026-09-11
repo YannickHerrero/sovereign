@@ -1,8 +1,42 @@
 import { describe, expect, it } from 'vitest';
-import { fuzzyScore, paletteEntries, searchPalette, type PaletteEntry } from './palette';
+import { fuzzyScore, paletteActions, paletteEntries, searchPalette, type PaletteContext, type PaletteEntry } from './palette';
 
 const entry = (title: string, updatedAt = 0, repo = ''): PaletteEntry => ({
   kind: 'discussion', wsId: 'host', taskId: title, title, subtitle: repo, repo, updatedAt,
+});
+
+const context: PaletteContext = {
+  view: 'chat', desktop: true, wsId: 'host', taskId: 'one', pinned: false,
+  wide: false, sidebarCollapsed: false, diffMode: 'unified',
+};
+
+describe('palette actions', () => {
+  it('offers contextual navigation and non-destructive commands', () => {
+    expect(paletteActions(context).map((e) => e.action)).toEqual(['diff', 'pin', 'copy', 'width', 'sidebar', 'new', 'settings']);
+    expect(paletteActions({ ...context, view: 'diff' }).map((e) => e.action))
+      .toEqual(['conversation', 'pin', 'copy', 'split', 'sidebar', 'new', 'settings']);
+    expect(paletteActions({ ...context, view: 'diff', diffMode: 'split' }).map((e) => e.action)).toContain('unified');
+  });
+  it('hides desktop-only and unavailable commands', () => {
+    expect(paletteActions({ ...context, desktop: false }).map((e) => e.action))
+      .toEqual(['diff', 'pin', 'copy', 'new', 'settings']);
+    expect(paletteActions({ ...context, desktop: false, view: 'settings', wsId: undefined, taskId: undefined }))
+      .toEqual([]);
+    expect(paletteActions({ ...context, pinned: undefined }).map((e) => e.action)).not.toContain('pin');
+  });
+  it('reflects preferences and pin state in the labels', () => {
+    const entries = paletteActions({ ...context, wide: true, sidebarCollapsed: true, pinned: true });
+    expect(entries.find((e) => e.action === 'width')?.title).toBe('Use standard width');
+    expect(entries.find((e) => e.action === 'sidebar')?.title).toBe('Show sidebar');
+    expect(entries.find((e) => e.action === 'pin')?.title).toBe('Unpin discussion');
+  });
+  it('uses bilingual aliases and ranks across categories when searching', () => {
+    const entries = [...paletteActions(context), entry('the diff', 100), { ...entry('diff', 10), kind: 'machine' as const }];
+    expect(searchPalette(entries, 'diff').map((e) => e.kind)).toEqual(['action', 'machine', 'discussion']);
+    expect(searchPalette(entries, 'pleine largeur')[0]?.action).toBe('width');
+    expect(searchPalette(entries, 'reglages')[0]?.action).toBe('settings');
+    expect(searchPalette(entries, '')[0]?.kind).toBe('action');
+  });
 });
 
 describe('palette search', () => {
