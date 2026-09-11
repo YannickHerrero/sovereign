@@ -3,6 +3,7 @@
   import Icon from '../../../components/Icon.svelte';
   import { api } from '../../../lib/api';
   import { diffPrefs } from '../../../lib/diff/viewed.svelte';
+  import { dialogOpen } from '../../../lib/typeahead';
   import { router } from '../../../lib/router.svelte';
   import type { FileDiff } from '../../../lib/types';
   import type { WorkspaceStore } from '../../../lib/workspace.svelte';
@@ -36,7 +37,7 @@
 
   $effect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') back();
+      if (event.key === 'Escape' && !event.defaultPrevented && !dialogOpen()) back();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

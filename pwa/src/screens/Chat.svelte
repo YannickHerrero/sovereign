@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import Composer from '../components/Composer.svelte';
   import DiffSheet from '../components/DiffSheet.svelte';
   import Icon from '../components/Icon.svelte';
@@ -7,7 +8,7 @@
   import { router } from '../lib/router.svelte';
   import type { WorkspaceStore } from '../lib/workspace.svelte';
 
-  let { store, taskId }: { store: WorkspaceStore; taskId: string } = $props();
+  let { store, taskId, diff = false }: { store: WorkspaceStore; taskId: string; diff?: boolean } = $props();
 
   // The parent keys this component by task id, so a session per instance is intended.
   // svelte-ignore state_referenced_locally
@@ -17,6 +18,14 @@
   const summary = $derived(session.summary);
 
   $effect(() => session.start());
+  $effect(() => {
+    if (diff) untrack(() => { void session.openDiff(); });
+    else session.closeDiff();
+  });
+
+  function closeDiff() {
+    router.go({ name: 'chat', wsId: store.server.id, taskId });
+  }
 
   function pin() {
     menuOpen = false;
@@ -68,7 +77,7 @@
 
   {#if session.touched.length}
     <div class="pr-wrap">
-      <button class="pr" onclick={() => session.openDiff()}>
+      <button class="pr" onclick={() => router.go({ name: 'diff', wsId: store.server.id, taskId })}>
         <Icon name="pr" color="#6b675f" />
         <span>View diff</span>
         <span class="plus">+{session.totalPlus}</span>
@@ -93,7 +102,7 @@
   />
 
   {#if session.diffOpen}
-    <DiffSheet files={session.diffFiles} loading={session.diffLoading} onClose={() => session.closeDiff()} />
+    <DiffSheet files={session.diffFiles} loading={session.diffLoading} onClose={closeDiff} />
   {/if}
 </div>
 

@@ -12,10 +12,10 @@
   import Workspaces from './screens/Workspaces.svelte';
 
   const route = $derived(router.route);
-  const store = $derived(route.name === 'tasks' || route.name === 'chat' ? workspaceStore(route.wsId) : undefined);
+  const store = $derived('wsId' in route ? workspaceStore(route.wsId) : undefined);
 
   $effect(() => {
-    if ((route.name === 'tasks' || route.name === 'chat') && !store) router.replace({ name: 'workspaces' });
+    if ('wsId' in route && !store) router.replace({ name: 'workspaces' });
   });
 </script>
 
@@ -30,10 +30,12 @@
   {:else if route.name === 'settings'}
     <Settings />
   {:else if route.name === 'tasks' && store}
-    <Tasks {store} />
-  {:else if route.name === 'chat' && store}
+    {#key store.server.id}
+      <Tasks {store} compose={route.compose ?? false} />
+    {/key}
+  {:else if (route.name === 'chat' || route.name === 'diff') && store}
     {#key `${route.wsId}/${route.taskId}`}
-      <Chat {store} taskId={route.taskId} />
+      <Chat {store} taskId={route.taskId} diff={route.name === 'diff'} />
     {/key}
   {:else}
     <Workspaces />

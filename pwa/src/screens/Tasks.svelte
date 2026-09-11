@@ -9,7 +9,7 @@
   import type { ImageContent, PiModel, Repo } from '../lib/types';
   import type { WorkspaceStore } from '../lib/workspace.svelte';
 
-  let { store }: { store: WorkspaceStore } = $props();
+  let { store, compose = false }: { store: WorkspaceStore; compose?: boolean } = $props();
 
   let searchOpen = $state(false);
   let query = $state('');
@@ -26,6 +26,11 @@
   const branch = $derived(repos.find((r) => r.name === repo)?.branch ?? null);
 
   $effect(() => store.acquire());
+  $effect(() => {
+    // Track each navigation, including another New discussion while already on /new.
+    const route = router.route;
+    if (compose && route.name === 'tasks') composerOpen = true;
+  });
 
   $effect(() => {
     const server = store.server;

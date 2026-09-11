@@ -42,6 +42,8 @@
   let textarea = $state<HTMLTextAreaElement | null>(null);
 
   $effect(() => () => c.dispose());
+  // Also focus when a navigation action opens the composer through its bound prop.
+  $effect(() => { if (open && textarea) textarea.focus(); });
 
   // Hardware keyboards only (iPad in landscape): opens the sheet and types into it.
   $effect(() => {
