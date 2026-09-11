@@ -11,6 +11,8 @@
   import TaskPane from './TaskPane.svelte';
   import DiffView from './diff/DiffView.svelte';
 
+  let { onSearch }: { onSearch: () => void } = $props();
+
   const route = $derived(router.route);
   const wsId = $derived('wsId' in route ? route.wsId : (settings.servers[0]?.id ?? undefined));
   const store = $derived(wsId ? workspaceStore(wsId) : undefined);
@@ -28,7 +30,7 @@
 </script>
 
 <div class="shell" class:sidebar-collapsed={layout.sidebarCollapsed}>
-  <Sidebar {store} {filter} onFilter={(f) => (filter = f)} {model}
+  <Sidebar {onSearch} {store} {filter} onFilter={(f) => (filter = f)} {model}
     collapsed={layout.sidebarCollapsed} onToggle={() => layout.toggleSidebar()} />
 
   {#if store}
@@ -42,15 +44,17 @@
       <Settings embedded />
     </section>
   {:else if store && taskId && route.name === 'diff'}
-    {#key taskId}
+    {#key `${store.server.id}/${taskId}`}
       <DiffView {store} {taskId} />
     {/key}
   {:else if store && taskId}
-    {#key taskId}
+    {#key `${store.server.id}/${taskId}`}
       <TaskPane {store} {taskId} onModel={(m) => (model = m)} />
     {/key}
   {:else if store}
-    <NewTaskPane {store} />
+    {#key store.server.id}
+      <NewTaskPane {store} />
+    {/key}
   {:else}
     <section class="column welcome">
       <div>
