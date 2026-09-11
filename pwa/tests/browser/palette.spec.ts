@@ -54,7 +54,7 @@ test('fuzzy search opens discussions and switches hosts with the keyboard', asyn
   await expect(page).toHaveURL(/\/w\/remote$/);
   await page.keyboard.press('Control+k');
   await expect(page.getByRole('option', { name: /Réparer|Deployment/ })).toHaveCount(0);
-  await expect(page.getByRole('option', { name: /Build machine/ })).toContainText('Current machine');
+  await expect(page.getByRole('option', { name: /^Build machine/ })).toContainText('Current machine');
 });
 
 test('visible trigger, navigation, empty state and focus restoration', async ({ page }, testInfo) => {
@@ -63,7 +63,7 @@ test('visible trigger, navigation, empty state and focus restoration', async ({ 
   await trigger.click();
   const search = page.getByRole('combobox');
   await expect(search).toBeFocused();
-  await expect(page.getByRole('option', { name: /Réparer/ })).toBeVisible();
+  await expect(page.getByRole('option', { name: /^Réparer/ })).toBeVisible();
   await expect(page.getByRole('option', { selected: true })).toContainText('View diff');
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('option', { selected: true })).toContainText('Pin discussion');
@@ -179,6 +179,57 @@ test('new discussion opens the composer and settings works without a host', asyn
   await page.goto('/');
   await command(page, 'réglages');
   await expect(page).toHaveURL(/\/settings$/);
+});
+
+test('compact palette design stays within the viewport and keeps long rows on one line', async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.keyboard.press('Control+k');
+  const dialog = page.getByRole('dialog');
+  await expect(page.locator('.result-count')).toHaveText(testInfo.project.name === 'desktop' ? '11 results' : '9 results');
+  await expect(dialog).toHaveCSS('background-color', 'rgb(251, 250, 248)');
+  await expect(dialog).toHaveCSS('border-radius', '12px');
+  await expect(dialog.locator('.status')).toHaveCount(0);
+  const bounds = await dialog.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.height).toBeLessThanOrEqual(452);
+  if (testInfo.project.name === 'desktop') {
+    expect(bounds!.width).toBe(540);
+    expect(bounds!.y).toBe(84);
+  }
+  const screenshot = testInfo.outputPath('command-center.png');
+  await page.screenshot({ path: screenshot });
+  await testInfo.attach('command-center', { path: screenshot, contentType: 'image/png' });
+
+  await page.getByRole('combobox').fill('dplmnt');
+  await expect(page.locator('.result-count')).toHaveText('1 result');
+  await page.getByRole('combobox').fill('zzzzzz');
+  await expect(page.locator('.result-count')).toHaveText('0 results');
+  await expect(page.getByText('No results', { exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  const longTask = { ...tasks[0], title: 'A very long discussion title '.repeat(12), repo: 'very-long-project-name-'.repeat(12) };
+  await page.route('**/local/api/tasks', (route) => route.fulfill({ json: [longTask] }));
+  await page.reload();
+  await page.keyboard.press('Control+k');
+  await page.getByRole('combobox').fill('very long discussion');
+  const row = page.getByRole('option');
+  await expect(row).toHaveCount(1);
+  await expect(row).toHaveAttribute('title', `${longTask.title} · ${longTask.repo} · done`);
+  const dimensions = await row.evaluate((el) => {
+    const title = el.querySelector('.row-title')!;
+    const meta = el.querySelector('.row-meta')!;
+    return {
+      titleTruncated: title.scrollWidth > title.clientWidth,
+      metaTruncated: meta.scrollWidth > meta.clientWidth,
+      sameLine: Math.abs(title.getBoundingClientRect().y + title.clientHeight / 2 - meta.getBoundingClientRect().y - meta.clientHeight / 2) < 1,
+      fits: el.scrollWidth <= el.clientWidth && document.documentElement.scrollWidth <= window.innerWidth,
+    };
+  });
+  expect(dimensions).toEqual({ titleTruncated: true, metaTruncated: true, sameLine: true, fits: true });
+  // Narrow phones and a short viewport (e.g. an on-screen keyboard) retain the footer.
+  await page.setViewportSize({ width: 320, height: 360 });
+  await expect(dialog.locator('.help')).toBeInViewport();
+  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
 });
 
 test('palette typing leaves the composer draft untouched', async ({ page }, testInfo) => {
